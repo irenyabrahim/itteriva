@@ -5273,7 +5273,7 @@ function drawSection(cv=$('#section'),vw=null){const{c,w,h}=frame(cv,vw);drawEnv
     for(const f of FW){const xa=Math.min(f.p[0],f.q[0]),xb=Math.max(f.p[0],f.q[0]);rect(xa,xb,y0,md.H);c.fillStyle=far;c.fill();c.lineWidth=LW.thin;c.strokeStyle=INK;c.stroke();
       const e=md.E[f.i];if(!e)continue;for(const wd of md.wins.filter(w=>w.e===f.i)){const a=e.a[0]+e.u[0]*(wd.s-wd.w/2),b=e.a[0]+e.u[0]*(wd.s+wd.w/2);SCat(c,wd.door?'doors':'glazing');
         rect(Math.min(a,b),Math.max(a,b),wd.door?wd.base+y0:wd.sill,wd.head);c.fillStyle=wd.door?PAPER:mixC(SS.glass||PAPER,PAPER,0.4);c.fill();c.lineWidth=LW.hair;c.stroke();SCat(c,null);}}}
-  for(const o of SH.filter(o=>o.z1<=zc||o.faces).sort((a,b)=>a.z1-b.z1)){if(o.faces&&o.z1>zc)o.clipZ=zc;drawProj(c,X,o,far,LW.thin);}
+  for(const o of SH.filter(o=>o.z1<=zc||o.faces||o.mesh).sort((a,b)=>a.z1-b.z1)){if(o.faces&&o.z1>zc||o.mesh)o.clipZ=zc;drawProj(c,X,o,far,LW.thin);}
   c.lineWidth=LW.heavy;c.beginPath();c.strokeStyle=INK;c.moveTo(...X(ex0,-0.15));c.lineTo(...X(ex1,-0.15));c.stroke();
   if(!S.built){for(let i=0;i+1<outer.length;i+=2){rect(outer[i],outer[i+1],0,md.H);c.setLineDash([5,3]);c.lineWidth=LW.med;c.stroke();c.setLineDash([]);}
     c.font=`500 ${fz(10)}px ${FL}`;c.fillStyle=INK;putText(c,UC('Mass'),[X((rx0+bx1)/2,md.H/2)]);secCut(c,X,SH,zc,rect);levels(c,X,md,bx1);drawPins(c,VID('section'),a=>X(a[0],a[1]),vw);if(!vw)sxRedraw('section');return;}
@@ -5343,7 +5343,7 @@ function objsOnly(cv,c,w,h,vw,kind){const all=projShapes();if(!all.length)return
   if(sec&&SS.ground!=='line'){rect(ex0,ex1,-0.15-Math.max(0.75,fz(26)/sc),-0.15);c.fillStyle=getPat(c,'earth',0);c.fill();}
   drawEnts(c,cv,VID(sec?'section':'elev'),X,()=>0,false);
   const far=mixC(SS.face,PAPER,0.55),fill=o=>o.wall?mixC(SS.face,INK,0.05):mixC(SS.face,INK,0.1);
-  for(const o of SH.filter(o=>!sec||o.z1<=zc||o.faces).sort((a,b)=>a.z1-b.z1)){if(sec&&o.faces&&o.z1>zc)o.clipZ=zc;drawProj(c,X,o,sec?far:fill(o),sec?LW.thin:LW.med);}
+  for(const o of SH.filter(o=>!sec||o.z1<=zc||o.faces||o.mesh).sort((a,b)=>a.z1-b.z1)){if(sec&&(o.faces&&o.z1>zc||o.mesh))o.clipZ=zc;drawProj(c,X,o,sec?far:fill(o),sec?LW.thin:LW.med);}
   c.lineWidth=LW.heavy;c.beginPath();c.strokeStyle=INK;c.moveTo(...X(ex0,sec?-0.15:0));c.lineTo(...X(ex1,sec?-0.15:0));c.stroke();
   if(sec)secCut(c,X,SH,zc,rect);
   drawEnts(c,cv,VID(sec?'section':'elev'),X,()=>0,true);
@@ -11771,6 +11771,119 @@ function gumInClose(){gumIn.hidden=true;}
   const inp=$('#gumInV');inp.value=pending.def!==undefined?String(pending.def):'';gumIn.style.left=x+'px';gumIn.style.top=y+'px';gumIn.hidden=false;setTimeout(()=>{inp.focus();inp.select();},0);};}
 $('#gumInV').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();const v=e.target.value;gumInClose();if(pending)run(v);}else if(e.key==='Escape'){e.preventDefault();gumInClose();if(pending){pending=null;renderOpts();msg('Cancelled.');}}});
 $('#gumInV').addEventListener('blur',()=>setTimeout(()=>{if(document.activeElement!==$('#gumInV'))gumInClose();},150));
+
+/* ---------- Student tester fixes B (2026-10-21): imported models drawn as they look in elevations and sections.
+   Before, an imported mesh was drawn as its bounding box. Now its real edges are projected: outlines and folds,
+   with what sits behind other parts left out (hidden lines removed against a depth image of the whole view),
+   its visible faces filled, and in a section the cut through it outlined and filled. ---------- */
+let VROT=0;
+{const _wr=withRot;withRot=function(th,fn){const was=VROT;VROT=th;try{return _wr(th,fn);}finally{VROT=was;}};}
+const MPJ={gl:null,rt:null,cache:new Map(),edges:new WeakMap(),fail:false};
+function mpjGL(){if(MPJ.fail)return null;if(MPJ.gl)return MPJ.gl;
+  try{const r=new THREE.WebGLRenderer({antialias:false,alpha:true,preserveDrawingBuffer:false});r.setPixelRatio(1);r.setClearColor(0x000000,0);r.localClippingEnabled=true;MPJ.gl=r;
+    MPJ.depthMat=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking,side:THREE.DoubleSide});return r;}catch(e){MPJ.fail=true;return null;}}
+// the edges worth drawing in one geometry: borders, folds sharper than 25 degrees, and the two face normals of every
+// other edge so the outline of a curved surface (where it turns away from the viewer) can be found for any direction
+function mpjEdges(g){let E=MPJ.edges.get(g);if(E)return E;const P=g.attributes.position,I=g.index,n=I?I.count:P.count,tri=Math.floor(n/3);
+  const vid=new Map(),wp=[],idx=new Int32Array(n);const key=(x,y,z)=>`${Math.round(x*1e4)},${Math.round(y*1e4)},${Math.round(z*1e4)}`;
+  for(let i=0;i<n;i++){const v=I?I.getX(i):i,x=P.getX(v),y=P.getY(v),z=P.getZ(v),k=key(x,y,z);let id=vid.get(k);if(id===undefined){id=wp.length/3;vid.set(k,id);wp.push(x,y,z);}idx[i]=id;}
+  const fn=new Float32Array(tri*3),em=new Map(),A=new THREE.Vector3(),B=new THREE.Vector3(),C=new THREE.Vector3();
+  for(let t=0;t<tri;t++){const a=idx[3*t],b=idx[3*t+1],c=idx[3*t+2];if(a===b||b===c||a===c)continue;
+    A.set(wp[3*a],wp[3*a+1],wp[3*a+2]);B.set(wp[3*b],wp[3*b+1],wp[3*b+2]);C.set(wp[3*c],wp[3*c+1],wp[3*c+2]);B.sub(A);C.sub(A);B.cross(C);const L=B.length();if(L<1e-12)continue;B.divideScalar(L);fn[3*t]=B.x;fn[3*t+1]=B.y;fn[3*t+2]=B.z;
+    for(const[p,q]of[[a,b],[b,c],[c,a]]){const k=p<q?p*4194304+q:q*4194304+p;const e=em.get(k);if(e)e.push(t);else em.set(k,[p<q?p:q,p<q?q:p,t]);}}
+  // kinds: 1 border or fold (always drawn), 2 smooth (drawn only where it is an outline for the view)
+  const out=[];const cosT=Math.cos(25*Math.PI/180);
+  for(const e of em.values()){const[p,q,t1,t2]=e;if(t2===undefined){out.push(p,q,t1,-1,1);continue;}
+    if(e.length>4){out.push(p,q,t1,t2,1);continue;}
+    const d=fn[3*t1]*fn[3*t2]+fn[3*t1+1]*fn[3*t2+1]+fn[3*t1+2]*fn[3*t2+2];out.push(p,q,t1,t2,d<cosT?1:2);}
+  E={wp:new Float32Array(wp),fn,ed:new Int32Array(out),tri};MPJ.edges.set(g,E);return E;}
+function mpjMeshes(id){const out=[];for(const o of world.children){if(o.userData.solid!==id||o.visible===false)continue;o.updateMatrixWorld(true);o.traverse(m=>{if(m.isMesh&&m.geometry&&m.geometry.attributes&&m.geometry.attributes.position&&m.visible!==false)out.push(m);});}return out;}
+// one batch = every imported mesh in this drawing, seen along -z after the view's turn, optionally kept only beyond z = clip
+function mpjBatch(clip){const shapes=projShapes().filter(o=>o.mesh),th=VROT||0;if(!shapes.length)return null;
+  const sig=JSON.stringify([th,clip==null?null:+clip.toFixed(4),world.children.length,typeof GCgen!=='undefined'?GCgen:0,shapes.map(o=>[o.s.id,o.s.pos,o.s.rot,o.s.sc])]);
+  if(MPJ.cache.has(sig)){const b=MPJ.cache.get(sig);MPJ.cache.delete(sig);MPJ.cache.set(sig,b);return b;}
+  const r=mpjGL();if(!r)return null;const R=new THREE.Matrix4().makeRotationY(th),items=[],box=new THREE.Box3(),tmp=new THREE.Box3();
+  shapes.forEach((o,k)=>{for(const m of mpjMeshes(o.s.id)){const M=new THREE.Matrix4().multiplyMatrices(R,m.matrixWorld);if(!m.geometry.boundingBox)m.geometry.computeBoundingBox();tmp.copy(m.geometry.boundingBox).applyMatrix4(M);if(clip!=null&&tmp.min.z>clip)continue;box.union(tmp);items.push({o,k,m,M});}});
+  if(!items.length||box.isEmpty())return null;
+  const x0=box.min.x,x1=box.max.x,y0=box.min.y,y1=box.max.y,span=Math.max(x1-x0,y1-y0,0.01),cap=Math.min(2560,r.capabilities.maxTextureSize||2048);
+  const px=Math.max(span/cap,0.004),W=Math.max(8,Math.ceil((x1-x0)/px)+2),H=Math.max(8,Math.ceil((y1-y0)/px)+2),X0=x0-px,Y0=y0-px;
+  const zTop=(clip!=null?Math.min(box.max.z,clip):box.max.z)+1,near=0.5,far=zTop-box.min.z+1;
+  const cam=new THREE.OrthographicCamera(X0,X0+W*px,Y0+H*px,Y0,near,far);cam.position.set(0,0,zTop);cam.updateMatrixWorld(true);cam.updateProjectionMatrix();
+  const scene=new THREE.Scene(),idMats=[];
+  for(const it of items){const mm=new THREE.Mesh(it.m.geometry,MPJ.depthMat);mm.matrixAutoUpdate=false;mm.matrix.copy(it.M);mm.matrixWorld.copy(it.M);mm.frustumCulled=false;scene.add(mm);it.mesh=mm;}
+  const planes=clip!=null?[new THREE.Plane(new THREE.Vector3(0,0,-1),clip)]:[];
+  const rt=new THREE.WebGLRenderTarget(W,H,{minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter,depthBuffer:true});
+  const was=r.clippingPlanes;r.clippingPlanes=planes;const dep=new Uint8Array(W*H*4),ids=new Uint8Array(W*H*4);
+  try{r.setRenderTarget(rt);r.setClearColor(0x000000,0);r.clear();r.render(scene,cam);r.readRenderTargetPixels(rt,0,0,W,H,dep);
+    for(const it of items){let m=idMats[it.k];if(!m){const v=it.k+1;m=idMats[it.k]=new THREE.MeshBasicMaterial({color:new THREE.Color(((v>>16)&255)/255,((v>>8)&255)/255,(v&255)/255),side:THREE.DoubleSide});}it.mesh.material=m;}
+    r.setClearColor(0x000000,0);r.clear();r.render(scene,cam);r.readRenderTargetPixels(rt,0,0,W,H,ids);}
+  finally{r.setRenderTarget(null);r.clippingPlanes=was;rt.dispose();idMats.forEach(m=>m&&m.dispose());}
+  // depth image as z in the turned frame (bigger z is nearer the viewer); NaN where nothing is drawn
+  const Z=new Float32Array(W*H),K=[255/256/16777216/255,255/256/65536/255,255/256/256/255,255/256/255];
+  for(let i=0;i<W*H;i++){const a=dep[4*i+3];if(!a&&!dep[4*i]&&!dep[4*i+1]&&!dep[4*i+2]){Z[i]=NaN;continue;}const d=dep[4*i]*K[0]+dep[4*i+1]*K[1]+dep[4*i+2]*K[2]+a*K[3];Z[i]=zTop-(near+d*(far-near));}
+  const ID=new Int32Array(W*H);for(let i=0;i<W*H;i++)ID[i]=(ids[4*i]<<16|ids[4*i+1]<<8|ids[4*i+2])-1;
+  const eps=Math.max(0.02,px*1.5),zAt=(x,y)=>{const i=Math.floor((x-X0)/px),j=Math.floor((y-Y0)/px);let lo=Infinity;
+    for(let dj=-1;dj<=1;dj++)for(let di=-1;di<=1;di++){const ii=i+di,jj=j+dj;if(ii<0||jj<0||ii>=W||jj>=H)return -Infinity;const z=Z[jj*W+ii];if(z!==z)return -Infinity;if(z<lo)lo=z;}return lo;};
+  const per=new Map();for(const o of shapes)per.set(o.s.id,{lines:[],folds:[],cut:[],img:null,ib:null});
+  const v=new THREE.Vector3(),w=new THREE.Vector3(),n1=new THREE.Vector3(),n2=new THREE.Vector3(),NM=new THREE.Matrix3();
+  for(const it of items){const E=mpjEdges(it.m.geometry),P=per.get(it.o.s.id),wp=E.wp,ed=E.ed,fn=E.fn;NM.getNormalMatrix(it.M);
+    // the vertices once, turned into the view
+    const nv=wp.length/3,T=new Float32Array(nv*3),e=it.M.elements;
+    for(let i=0;i<nv;i++){const x=wp[3*i],y=wp[3*i+1],z=wp[3*i+2];T[3*i]=e[0]*x+e[4]*y+e[8]*z+e[12];T[3*i+1]=e[1]*x+e[5]*y+e[9]*z+e[13];T[3*i+2]=e[2]*x+e[6]*y+e[10]*z+e[14];}
+    const nz=t=>{n1.set(fn[3*t],fn[3*t+1],fn[3*t+2]).applyMatrix3(NM);return n1.z;};
+    for(let k=0;k<ed.length;k+=5){const kind=ed[k+4],t1=ed[k+2],t2=ed[k+3];let fold=false;
+      if(kind===2){const a=nz(t1),b=nz(t2);if((a>1e-6)===(b>1e-6)&&Math.abs(a)>1e-6&&Math.abs(b)>1e-6)continue;}
+      else if(t2>=0){const a=nz(t1),b=nz(t2);fold=Math.abs(a)>1e-6&&Math.abs(b)>1e-6&&(a>0)===(b>0);}
+      let ax=T[3*ed[k]],ay=T[3*ed[k]+1],az=T[3*ed[k]+2],bx=T[3*ed[k+1]],by=T[3*ed[k+1]+1],bz=T[3*ed[k+1]+2];
+      if(clip!=null){if(az>clip&&bz>clip)continue;if(az>clip||bz>clip){const t=(clip-az)/(bz-az);const cx=ax+(bx-ax)*t,cy=ay+(by-ay)*t;if(az>clip){ax=cx;ay=cy;az=clip;}else{bx=cx;by=cy;bz=clip;}}}
+      const L=Math.hypot(bx-ax,by-ay)/px;if(L<0.35)continue;const n=Math.min(4000,Math.ceil(L*1.2)+1);let run=null;const arr=fold?P.folds:P.lines;
+      for(let s=0;s<=n;s++){const t=s/n,x=ax+(bx-ax)*t,y=ay+(by-ay)*t,z=az+(bz-az)*t,vis=z>=zAt(x,y)-eps;
+        if(vis){if(!run)run=[x,y];run[2]=x;run[3]=y;}else if(run){if(run[2]!==undefined)arr.push(run[0],run[1],run[2],run[3]);run=null;}}
+      if(run&&run[2]!==undefined)arr.push(run[0],run[1],run[2],run[3]);}
+    // the cut: where the section plane passes through this part's triangles (a corner exactly on the plane counts as beyond, so no crossing is missed)
+    if(clip!=null){const g=it.m.geometry,Pp=g.attributes.position,I=g.index,cnt=I?I.count:Pp.count,cut=P.cut;
+      for(let t=0;t+2<cnt;t+=3){const q=[];for(let j=0;j<3;j++){const vi=I?I.getX(t+j):t+j;v.fromBufferAttribute(Pp,vi).applyMatrix4(it.M);q.push([v.x,v.y,v.z]);}
+        const hit=[];for(let j=0;j<3;j++){const a=q[j],b=q[(j+1)%3];if((a[2]>=clip)!==(b[2]>=clip)){const u=(clip-a[2])/(b[2]-a[2]);hit.push([a[0]+(b[0]-a[0])*u,a[1]+(b[1]-a[1])*u]);}}
+        if(hit.length===2)cut.push(hit[0][0],hit[0][1],hit[1][0],hit[1][1]);}}}
+  // pieces of one straight line (a grid of panels, a long edge split into triangles) joined, so a dense facade stays light to draw
+  for(const P of per.values()){P.lines=mpjMerge(P.lines,px*0.5);P.folds=mpjMerge(P.folds,px*0.5);}
+  // each object's visible faces as a small image, so drawing order with the rest of the drawing still works
+  shapes.forEach((o,k)=>{let i0=W,i1=-1,j0=H,j1=-1;for(let j=0;j<H;j++){const row=j*W;for(let i=0;i<W;i++)if(ID[row+i]===k){if(i<i0)i0=i;if(i>i1)i1=i;if(j<j0)j0=j;if(j>j1)j1=j;}}
+    if(i1<0)return;const cw=i1-i0+1,ch=j1-j0+1,cv=document.createElement('canvas');cv.width=cw;cv.height=ch;const cx=cv.getContext('2d'),im=cx.createImageData(cw,ch);
+    for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++)if(ID[j*W+i]===k){const p=4*((j1-j)*cw+(i-i0));im.data[p]=im.data[p+1]=im.data[p+2]=255;im.data[p+3]=255;}
+    cx.putImageData(im,0,0);const P=per.get(o.s.id);P.img=cv;P.ib=[X0+i0*px,Y0+j0*px,X0+(i1+1)*px,Y0+(j1+1)*px];});
+  const b={per,px};MPJ.cache.set(sig,b);while(MPJ.cache.size>8)MPJ.cache.delete(MPJ.cache.keys().next().value);return b;}
+function mpjMerge(a,tol){if(a.length<8)return a;const G=new Map();
+  for(let i=0;i<a.length;i+=4){let x0=a[i],y0=a[i+1],x1=a[i+2],y1=a[i+3];const L=Math.hypot(x1-x0,y1-y0);if(L<1e-9)continue;let ux=(x1-x0)/L,uy=(y1-y0)/L;
+    if(ux<-1e-9||(Math.abs(ux)<=1e-9&&uy<0)){ux=-ux;uy=-uy;}const off=x0*uy-y0*ux,k=Math.round(Math.atan2(uy,ux)*2000)+'|'+Math.round(off/tol);
+    const t0=x0*ux+y0*uy,t1=x1*ux+y1*uy;let g=G.get(k);if(!g)G.set(k,g={ux,uy,off,iv:[]});g.iv.push(Math.min(t0,t1),Math.max(t0,t1));}
+  const out=[];for(const g of G.values()){const iv=[];for(let i=0;i<g.iv.length;i+=2)iv.push([g.iv[i],g.iv[i+1]]);iv.sort((p,q)=>p[0]-q[0]);
+    let cur=null;const emit=c=>{const nx=g.uy,ny=-g.ux;out.push(g.ux*c[0]+nx*g.off,g.uy*c[0]+ny*g.off,g.ux*c[1]+nx*g.off,g.uy*c[1]+ny*g.off);};
+    for(const v of iv){if(cur&&v[0]<=cur[1]+tol)cur[1]=Math.max(cur[1],v[1]);else{if(cur)emit(cur);cur=v.slice();}}if(cur)emit(cur);}
+  return out;}
+const MPJT=new Map();
+function mpjTint(img,col){let m=MPJT.get(img);if(m&&m.col===col)return m.cv;const cv=document.createElement('canvas');cv.width=img.width;cv.height=img.height;const c=cv.getContext('2d');c.drawImage(img,0,0);c.globalCompositeOperation='source-in';c.fillStyle=col;c.fillRect(0,0,cv.width,cv.height);MPJT.set(img,{col,cv});return cv;}
+function mpjSegs(c,X,a){c.beginPath();for(let i=0;i<a.length;i+=4){const p=X(a[i],a[i+1]),q=X(a[i+2],a[i+3]);c.moveTo(p[0],p[1]);c.lineTo(q[0],q[1]);}c.stroke();}
+// an imported mesh in an elevation or section: its faces, its outline at the given weight, its folds thinner
+function meshProj(c,X,o,fill,lw){let b;try{b=mpjBatch(o.clipZ!=null?o.clipZ:null);}catch(e){console.warn('mesh drawing',e);return false;}if(!b)return false;const P=b.per.get(o.s.id);if(!P)return true;
+  if(P.img&&fill){const p=X(P.ib[0],P.ib[3]),q=X(P.ib[2],P.ib[1]);c.save();c.imageSmoothingEnabled=true;c.drawImage(mpjTint(P.img,fill),p[0],p[1],q[0]-p[0],q[1]-p[1]);c.restore();}
+  c.save();c.strokeStyle=INK;c.lineCap='round';c.lineJoin='round';SCat(c,solidCat(o.s)||null);if(P.folds.length){c.lineWidth=Math.min(lw,LW.thin)*0.8;mpjSegs(c,X,P.folds);}if(P.lines.length){c.lineWidth=lw;mpjSegs(c,X,P.lines);}c.restore();return true;}
+// the cut through an imported mesh: outlines heavy, closed rings filled like any other cut
+function meshCut(c,X,o){let b;try{b=mpjBatch(o.clipZ!=null?o.clipZ:null);}catch(e){return false;}if(!b)return false;const P=b.per.get(o.s.id);if(!P)return true;const S2=P.cut;if(!S2.length)return true;
+  const tol=Math.max(1e-4,b.px*0.25),k=(x,y)=>`${Math.round(x/tol)},${Math.round(y/tol)}`,adj=new Map(),used=new Uint8Array(S2.length/4);
+  for(let i=0;i<S2.length;i+=4){for(const[x,y]of[[S2[i],S2[i+1]],[S2[i+2],S2[i+3]]]){const kk=k(x,y);let a=adj.get(kk);if(!a)adj.set(kk,a=[]);a.push(i/4);}}
+  const rings=[];for(let s=0;s<used.length;s++){if(used[s])continue;used[s]=1;const R=[[S2[4*s],S2[4*s+1]],[S2[4*s+2],S2[4*s+3]]];let closed=false;
+    for(let guard=0;guard<200000;guard++){const end=R[R.length-1],cand=(adj.get(k(end[0],end[1]))||[]).find(j=>!used[j]);if(cand===undefined)break;used[cand]=1;
+      const a=[S2[4*cand],S2[4*cand+1]],bb=[S2[4*cand+2],S2[4*cand+3]],nxt=k(a[0],a[1])===k(end[0],end[1])?bb:a;R.push(nxt);if(k(nxt[0],nxt[1])===k(R[0][0],R[0][1])){closed=true;break;}}
+    rings.push({R,closed});}
+  c.save();c.strokeStyle=INK;SCat(c,solidCat(o.s)||null);const cl=rings.filter(r=>r.closed&&r.R.length>3);
+  if(cl.length){c.beginPath();for(const r of cl)r.R.forEach((p,i)=>{const q=X(p[0],p[1]);i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]);});c.fillStyle=mixC(INK,PAPER,0.72);c.fill('evenodd');}
+  c.lineWidth=LW.heavy;c.lineJoin='round';c.beginPath();for(const r of rings)r.R.forEach((p,i)=>{const q=X(p[0],p[1]);i?c.lineTo(q[0],q[1]):c.moveTo(q[0],q[1]);});c.stroke();c.restore();return true;}
+{const _ps=projShapes;projShapes=function(){const out=_ps.apply(this,arguments);for(const o of out)if(o.box&&o.s&&o.s.kind==='mesh'&&!o.s.img)o.mesh=true;return out;};}
+// in a section a mesh wholly on the viewer's side of the cut never shows; if the drawing engine is missing, the old box is kept for what lies beyond
+{const _dp=drawProj;drawProj=function(c,X,o,fill,lw){if(o&&o.mesh){if(o.clipZ!=null&&o.z0>=o.clipZ)return;if(meshProj(c,X,o,fill,lw))return;if(o.clipZ!=null&&o.z1>o.clipZ)return;}return _dp.apply(this,arguments);};}
+{const _sc=secCut;secCut=function(c,X,SH,zc,rect){const rest=[];for(const o of SH){if(o.mesh&&o.z0<zc&&o.z1>zc){o.clipZ=zc;if(meshCut(c,X,o))continue;}rest.push(o);}return _sc.call(this,c,X,rest,zc,rect);};}
+
 </script>
 
 </html>
