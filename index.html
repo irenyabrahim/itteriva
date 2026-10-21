@@ -1437,6 +1437,40 @@ body.dwdraw #dwSide>#lrnPanel{max-height:40%}
 .cmd.dock.top output{flex:0 1 auto;max-width:55%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:10px;border-left:1px solid var(--line)}
 .cmd.dock.top input{text-overflow:ellipsis}
 body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padding-right:0}
+
+/* student tester fixes A */
+.wlc{position:relative}
+.wlcx{position:absolute;top:10px;right:12px;width:30px;height:30px;border:0;border-radius:6px;background:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer}
+.wlcx:hover{background:var(--panel-2);color:var(--ink)}
+.wlc .wlck{padding-right:34px}
+.wlcopt .wtag{display:inline-block;margin-left:6px;font-size:10.5px;font-weight:600;letter-spacing:.02em;padding:1px 6px;border-radius:9px;background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);vertical-align:1px}
+.wlcopt .wtag.also{background:var(--panel-2);color:var(--muted)}
+.wlcopt[aria-pressed="true"] .rd{background:var(--accent);border-color:var(--accent);border-radius:3px;box-shadow:inset 0 0 0 2px var(--panel)}
+.wlcopt[aria-pressed] .rd{border-radius:3px}
+.wlcmain{display:flex;align-items:center;gap:8px;margin:8px 0 0 21px;font-size:13px;color:var(--muted)}
+.wlcmain[hidden]{display:none}.wlcmain select{font:inherit;font-size:13px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+#wlcSample{margin-right:auto;margin-left:14px;font-size:13px}
+.wfrm .vwlays{grid-column:1/-1}
+.vwlh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.vwlh>span:first-child{font-size:13px;color:var(--muted);margin-right:auto}
+#vwLFind{width:150px;flex:none;font:inherit;font-size:12.5px;padding:3px 7px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+.wfrm label.vwlemp{flex-direction:row;align-items:center;gap:5px;font-size:12.5px;color:var(--muted)}
+.wfrm .vwlist{max-height:260px}
+.wfrm label.vwlrow{display:flex;flex-direction:row;align-items:center;gap:8px;font-size:12.5px;color:var(--ink);padding-top:3px;padding-bottom:3px;padding-right:8px;min-height:24px}
+.vwlrow .vwf{width:16px;flex:none;border:0;background:none;color:var(--muted);cursor:pointer;padding:0;font-size:11px;line-height:1}
+.vwlrow .vwf.no{visibility:hidden}
+.vwlrow input{margin:0;flex:none}
+.vwlrow em{flex:none;white-space:nowrap}
+.vwlrow em b{font-weight:400;font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-radius:8px;padding:0 5px;margin-left:6px}
+.vwlrow[hidden]{display:none!important}
+#layTabs{display:none!important}
+.cmd.dock.top{row-gap:3px;flex-wrap:wrap!important}
+.cmd.dock.top output{order:-2;flex:1 1 100%;max-width:none;white-space:normal;overflow:auto;text-overflow:clip;padding-left:0;border-left:0;max-height:4.3em;line-height:1.45}
+.cmd.dock.top #optBar{order:-1;flex:1 1 100%}
+.gumin{position:absolute;z-index:30;display:flex;align-items:center;gap:6px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(20,30,40,.18);padding:6px 8px;font-size:12.5px}
+.gumin[hidden]{display:none}
+.gumin input{width:90px;font:inherit;font-family:var(--f-mono);font-size:13px;padding:3px 6px;border:1px solid var(--accent);border-radius:5px;background:var(--panel);color:var(--ink);outline:0}
+.gumin small{color:var(--muted);font-size:11px}
 </style>
 
 <header class="top">
@@ -1818,7 +1852,7 @@ body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padd
     <label data-vk="section"><span>Mark on the plan</span><input id="vwMark" maxlength="3" autocomplete="off"></label>
     <label data-vk="plan section elev"><span>Shows</span><select id="vwScope"><option value="near">The building and what is near it</option><option value="all">Everything that is switched on</option></select></label>
     <label data-vk="plan section elev" id="vwNearL"><span>Distance around the building</span><input id="vwNear" inputmode="decimal" autocomplete="off"></label>
-    <div data-vk="plan section elev" class="vwlays"><div class="vwlh"><span id="vwLaysT">Layers shown in this drawing</span><span><button type="button" class="link" id="vwLAll">All</button> · <button type="button" class="link" id="vwLNone">None</button></span></div><div id="vwLays" class="vwlist"></div></div>
+    <div data-vk="plan section elev" class="vwlays"><div class="vwlh"><span id="vwLaysT">Layers shown in this drawing</span><input id="vwLFind" type="search" placeholder="Find a layer" aria-label="Find a layer"><label class="vwlemp"><input type="checkbox" id="vwLEmpty"> Hide empty</label><span><button type="button" class="link" id="vwLAll">All</button> · <button type="button" class="link" id="vwLNone">None</button></span></div><div id="vwLays" class="vwlist"></div></div>
     <label data-vk="detail"><span>Contents</span><select id="vwDSrc"><option value="model">Wall, window, floor and roof details from an assembly</option><option value="blank">Blank detail frames to draw in</option><option value="sheet">One blank sheet: draw anything, link drawings and model views</option></select></label>
     <label data-vk="detail" id="vwDWallL"><span>Wall assembly</span><select id="vwDWall"></select></label>
   </div>
@@ -1834,18 +1868,18 @@ body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padd
   <div class="dlgbar"><button type="button" class="ghost" id="posCancel">Cancel</button><button type="button" class="primary" id="posGo">Make sheets</button></div>
 </div></dialog>
 <dialog id="wlcDlg" aria-labelledby="wlcT1">
-  <div class="dlg wlc">
+  <div class="dlg wlc"><button type="button" class="wlcx" id="wlcX" aria-label="Close" title="Close (Esc). Keeps the current settings; type WELCOME to open this again.">×</button>
     <p class="wlck"><span>Welcome to Sketch to Building</span><span>Three quick choices. Each one can be changed later on its own, from the top bar or by typing WELCOME.</span></p>
     <h3 id="wlcT1"><span class="wn">1</span>Which program do you already know?</h3>
-    <p>We open with its shortcuts, mouse and command names, so you can start right away.</p>
-    <div class="wlcgrid" id="wlcKnow" role="radiogroup" aria-labelledby="wlcT1"></div>
+    <p>Pick every program you know. We open with the shortcuts, mouse and command names of the main one, and commands from the others work too.</p>
+    <div class="wlcgrid" id="wlcKnow" role="group" aria-labelledby="wlcT1"></div><div class="wlcmain" id="wlcMain" hidden></div>
     <h3 id="wlcT2"><span class="wn">2</span>Which program do you want to learn?</h3>
     <p>Keep working your way. After each command, a small card above the command line shows how the program you're learning does the same step.</p>
     <div class="wlclrn"><div class="wlcchips" id="wlcLearn" role="radiogroup" aria-labelledby="wlcT2"></div><div class="wlcprev" id="wlcPrev"></div></div>
     <h3 id="wlcT3"><span class="wn">3</span>How much help do you want on screen?</h3>
     <div class="wlcchips wlcsty" id="wlcStyle" role="radiogroup" aria-labelledby="wlcT3"></div>
     <p class="wlcind">Layout, controls and learning are separate settings. You can change any one of them later from the top bar without touching the others.</p>
-    <div class="wlcfoot"><span id="wlcSum"></span><span class="wlcna">Not affiliated with McNeel, Autodesk, Trimble or Adobe.</span><button type="button" class="primary" id="wlcGo">Start</button></div>
+    <div class="wlcfoot"><span id="wlcSum"></span><button type="button" class="link" id="wlcSample">Open the sample studio</button><span class="wlcna">Not affiliated with McNeel, Autodesk, Trimble or Adobe.</span><button type="button" class="primary" id="wlcGo">Start</button></div>
   </div>
 </dialog>
 <dialog id="unitsDlg">
@@ -2179,7 +2213,7 @@ const DEFAULT={pts:[[-6,-5],[6,-5],[6,1],[0,1],[0,5],[-6,5]],height:3.2,built:tr
   layers:clone(PRESETS[0].layers),floorLayers:clone(FPRESETS[0].layers),fpreset:0,roofLayers:clone(RPRESETS[0].layers),rpreset:0,room:'Studio',solids:[],sel:null,winType:'punched',winSize:{w:1.2,sill:0.9,head:2.1},doorType:'single',doorSize:{w:0.9,head:2.1},doorHand:0,doorSwing:'in',keymap:'revit',style:'render',sun:15,example:true,
   windows:[{e:0,s:3.4,t:'ribbon'},{e:0,s:8.6,t:'punched'},{e:1,s:3,t:'storefront'},{e:2,s:2.6,t:'punched'},{e:4,s:3,t:'tall'},{e:5,s:6.2,t:'punched'},{e:5,s:2.6,t:'punched'},{e:2,s:4.6,t:'single',hand:0,swing:'in'}]};
 let S=clone(DEFAULT);
-try{const v=JSON.parse(localStorage.getItem('s2b-state')||'null'); if(v&&v.layers) S=Object.assign(clone(DEFAULT),v);}catch(e){}
+try{const v=JSON.parse(localStorage.getItem('s2b-state')||'null'); if(v&&v.layers) S=Object.assign(clone(DEFAULT),v); else{S.pts=null;S.built=false;S.example=false;S.windows=[];}}catch(e){}
 const save=()=>{try{localStorage.setItem('s2b-state',JSON.stringify(S));}catch(e){}if(typeof projTouch==='function')projTouch();};
 let hist=[];
 let redoStack=[];
@@ -2645,7 +2679,7 @@ function pxDot(p,color,px=6){const g=new THREE.BufferGeometry().setFromPoints([n
 function startShape(shape,solid){pending=null;const line=shape==='line';if(line)shape='poly';sk={shape,pts:[],segs:[],corners:[],cur:null,solid:!!solid||shape==='sphere',line};if(tool!=='sketch'){tool='sketch';vp.classList.add('sketching');syncRail();}drawSketch();updateHint();renderOpts();}
 function addPoint(p){if(!sk||!p)return;
   if(sk.shape!=='poly'){if(!sk.pts.length){sk.pts.push(p);drawSketch();renderOpts();return;}
-    if(sk.shape==='sphere'){const c=sk.pts[0],r=Math.hypot(p[0]-c[0],p[1]-c[1]);if(r<0.001){msg('Drag out a radius for the sphere first.');return;}snap();const so=newSphere(c,r);S.solids.push(so);S.sel=so.id;S.example=false;sk=null;drawSketch();tip.hidden=true;setTool('select');refresh();msg(`Sphere created, radius ${r.toFixed(2)} m. Move, Rotate, Scale, Copy and Delete work on it.`);return;}
+    if(sk.shape==='sphere'){const c=sk.pts[0],r=Math.hypot(p[0]-c[0],p[1]-c[1]);if(r<0.001){msg('Drag out a radius for the sphere first.');return;}snap();const so=newSphere(c,r);S.solids.push(so);S.sel=so.id;S.example=false;sk=null;drawSketch();tip.hidden=true;setTool('select');refresh();msg(`Sphere created, radius ${fmtL(r)}. Move, Rotate, Scale, Copy and Delete work on it.`);return;}
     const sp=shapePts(p);if(sp)finishShape(sp);return;}
   const f=sk.pts[0];if(sk.pts.length>=3&&p[0]===f[0]&&p[1]===f[1]){closeSketch();return;}
   const l=sk.pts[sk.pts.length-1];if(l&&l[0]===p[0]&&l[1]===p[1])return;
@@ -2657,18 +2691,18 @@ function addPoint(p){if(!sk||!p)return;
 function endSketch(){if(!sk)return;if(sk.shape!=='poly'){closeSketch();return;}if(sk.pts.length<2){sk=null;drawSketch();tip.hidden=true;setTool('select');msg('');return;}finishOpen();}
 function finishOpen(){const P=sk.pts.filter((p,i,a)=>!i||Math.hypot(p[0]-a[i-1][0],p[1]-a[i-1][1])>1e-6);const line=sk.line;sk=null;pending=null;drawSketch();tip.hidden=true;
   if(P.length<2){setTool('select');return;}snap();const c=newCurve(P.length===2?'Line':'Polyline',P,false);S.solids.push(c);S.example=false;setSelIds([c.id]);
-  if(!line)setTool('select');refresh();msg(`${c.name} drawn, ${curveLen(c).toFixed(2)} m. ${EXT_HINT()}`);}
+  if(!line)setTool('select');refresh();msg(`${c.name} drawn, ${fmtL(curveLen(c))}. ${EXT_HINT()}`);}
 const EXT_HINT=()=>`${{rhino:'ExtrudeCrv',revit:'Extrusion (or WA for walls)',sketchup:'Push/Pull (P)',autocad:'EXTRUDE (EXT)'}[S.keymap]} gives it height.`;
 function undoPoint(){if(!sk||!sk.pts.length)return;if(sk.shape==='poly'&&sk.segs.length){const n=sk.segs.pop();sk.pts.splice(-n,n);sk.corners.pop();}else{sk.pts=[];sk.segs=[];sk.corners=[];}drawSketch();renderOpts();msg('Removed the last segment.');}
 function closeSketch(){if(!sk)return;if(sk.shape!=='poly'){msg(`Finish the ${SHAPES[sk.shape].toLowerCase()} first: pick a point or type a size.`);return;}
   if(sk.pts.length<3){msg('Place at least three corners before closing the outline.');return;}finishShape(sk.pts);}
 function finishShape(raw){const P=cleanFoot(raw);if(typeof P==='string'){msg(P);startShape(sk.shape,sk.solid);return;}
   if(!sk.solid){const name={poly:'Polyline',rect:'Rectangle',circle:'Circle',polygon:'Polygon'}[sk.shape];snap();const c=newCurve(name,P,true);S.solids.push(c);S.example=false;setSelIds([c.id]);sk=null;pending=null;drawSketch();tip.hidden=true;setTool('select');refresh();
-    msg(`Closed ${name.toLowerCase()} drawn, ${Math.abs(area(P)).toFixed(2)} m² inside. ${EXT_HINT()} Make building turns it straight into walls.`);return;}
+    msg(`Closed ${name.toLowerCase()} drawn, ${fmtA(Math.abs(area(P)))} inside. ${EXT_HINT()} Make building turns it straight into walls.`);return;}
   const shape=sk.shape,h=D.lastH||3.2;snap();const so=newSolid(SOLID_NAME[shape],P,h);S.solids.push(so);S.sel=so.id;S.example=false;sk=null;pending=null;drawSketch();tip.hidden=true;
   setTool('select');refresh();
   ask(`Height of ${so.name.toLowerCase()}`,h.toFixed(2),v=>{if(v<0.1||v>100)return'Height must be between 0.1 and 100 m.';so.h=v;D.lastH=v;refresh();});
-  msg(`${so.name} created, ${Math.abs(area(P)).toFixed(2)} m² footprint. Type a height or press Enter to keep ${h.toFixed(2)} m. Make building turns it into walls when you're ready.`);}
+  msg(`${so.name} created, ${fmtA(Math.abs(area(P)))} footprint. Type a height or press Enter to keep ${fmtL(h)}. Make building turns it into walls when you're ready.`);}
 
 /* ---------- Command options (Rhino-style prompt with clickable options) ---------- */
 const optBar=$('#optBar');
@@ -2695,12 +2729,12 @@ function getOpts(){
   if(tool==='window'){const W=S.winSize;return{prompt:'Wall to place a window on',opts:[
     {label:'Type',key:'T',val:WT[S.winType].label,act:()=>{setWinType(cycle(Object.keys(WT),S.winType));}},
     {label:'Width',key:'W',val:fmtN(W.w,'input'),act:()=>ask('Window width',W.w.toFixed(2),v=>{if(v<0.3||v>8)return'Width must be between 0.3 and 8 m.';W.w=v;})},
-    {label:'Sill',key:'S',val:fmtN(W.sill,'input'),act:()=>ask('Sill height',W.sill.toFixed(2),v=>{if(v<0||v>W.head-0.3)return`Sill must be at least 0.3 m below the head (${W.head.toFixed(2)} m).`;W.sill=v;})},
-    {label:'Head',key:'H',val:fmtN(W.head,'input'),act:()=>ask('Head height',W.head.toFixed(2),v=>{if(v<W.sill+0.3||v>S.height-0.15)return`Head must be between ${(W.sill+0.3).toFixed(2)} and ${(S.height-0.15).toFixed(2)} m.`;W.head=v;})}]};}
+    {label:'Sill',key:'S',val:fmtN(W.sill,'input'),act:()=>ask('Sill height',W.sill.toFixed(2),v=>{if(v<0||v>W.head-0.3)return`Sill must be at least 0.3 m below the head (${fmtL(W.head)}).`;W.sill=v;})},
+    {label:'Head',key:'H',val:fmtN(W.head,'input'),act:()=>ask('Head height',W.head.toFixed(2),v=>{if(v<W.sill+0.3||v>S.height-0.15)return`Head must be between ${fmtN(W.sill+0.3)} and ${fmtL((S.height-0.15))}.`;W.head=v;})}]};}
   if(tool==='door'){const W=S.doorSize;return{prompt:'Wall to place a door on',opts:[
     {label:'Type',key:'T',val:DT[S.doorType].label,act:()=>{setDoorType(cycle(Object.keys(DT),S.doorType));}},
     {label:'Width',key:'W',val:fmtN(W.w,'input'),act:()=>ask('Door width',W.w.toFixed(2),v=>{if(v<0.6||v>4)return'Door width must be between 0.6 and 4 m.';W.w=v;syncDoor();})},
-    {label:'Head',key:'H',val:fmtN(W.head,'input'),act:()=>ask('Door head height',W.head.toFixed(2),v=>{if(v<2||v>S.height-0.15)return`Door head must be between 2.00 and ${(S.height-0.15).toFixed(2)} m.`;W.head=v;syncDoor();})},
+    {label:'Head',key:'H',val:fmtN(W.head,'input'),act:()=>ask('Door head height',W.head.toFixed(2),v=>{if(v<2||v>S.height-0.15)return`Door head must be between 2.00 and ${fmtL((S.height-0.15))}.`;W.head=v;syncDoor();})},
     {label:'Hinge',key:'G',val:S.doorHand?'End':'Start',act:()=>doorFlip('hand')},
     {label:'Opens',key:'O',val:S.doorSwing==='out'?'Out':'In',act:()=>doorFlip('swing')}]};}
   if(tool!=='sketch'||!sk)return null;
@@ -2734,7 +2768,7 @@ function renderOpts(){if(tool==='window'&&typeof wtBox!=='undefined')syncWin();i
   optBar.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{g.opts[+b.dataset.i].act();renderOpts();drawSketch();cmdIn.focus();}));
   save();}
 function placeAlong(d){if(!sk||!sk.pts.length||!sk.cur)return;const l=sk.pts[sk.pts.length-1];let dx=sk.cur[0]-l[0],dz=sk.cur[1]-l[1];const m=Math.hypot(dx,dz)||1;
-  const was=D.mode;D.mode='line';addPoint([rnd3(l[0]+dx/m*d),rnd3(l[1]+dz/m*d)]);D.mode=was;msg(`Placed a point ${d} m along your cursor direction.`);}
+  const was=D.mode;D.mode='line';addPoint([rnd3(l[0]+dx/m*d),rnd3(l[1]+dz/m*d)]);D.mode=was;msg(`Placed a point ${fmtL(d)} along your cursor direction.`);}
 function setWinType(k){S.winType=k;const t=WT[k];S.winSize={w:t.w,sill:t.sill,head:Math.min(t.head,S.height-0.15)};syncWin();renderOpts();}
 
 /* ---------- Pointer handling ---------- */
@@ -2743,9 +2777,9 @@ glc.addEventListener('pointerdown',e=>{down={x:e.clientX,y:e.clientY,b:e.button}
 glc.addEventListener('pointermove',e=>{
   if(tool==='sketch'&&sk){const p=groundAt(e,e.shiftKey);sk.cur=p;drawSketch();
     let t='';if(p&&sk.pts.length){const a=sk.shape==='poly'?sk.pts[sk.pts.length-1]:sk.pts[0],dx=p[0]-a[0],dz=p[1]-a[1];
-      if(sk.shape==='poly'){t=`${Math.hypot(dx,dz).toFixed(2)} m · ${((Math.atan2(-dz,dx)*180/Math.PI+360)%360).toFixed(0)}°`;}
-      else if(sk.shape==='rect'){const f=D.rectMode==='center'?2:1;t=`${Math.abs(dx*f).toFixed(2)} × ${Math.abs(dz*f).toFixed(2)} m`;}
-      else t=`r ${Math.hypot(dx,dz).toFixed(2)} m`;}
+      if(sk.shape==='poly'){t=`${fmtL(Math.hypot(dx,dz))} · ${((Math.atan2(-dz,dx)*180/Math.PI+360)%360).toFixed(0)}°`;}
+      else if(sk.shape==='rect'){const f=D.rectMode==='center'?2:1;t=`${fmtN(Math.abs(dx*f))} × ${fmtL(Math.abs(dz*f))}`;}
+      else t=`r ${fmtL(Math.hypot(dx,dz))}`;}
     if(t){const r=vp.getBoundingClientRect();tip.hidden=false;tip.style.left=(e.clientX-r.left)+'px';tip.style.top=(e.clientY-r.top)+'px';tip.textContent=t;}else tip.hidden=true;}});
 glc.addEventListener('pointerleave',()=>{tip.hidden=true;});
 glc.addEventListener('pointerup',e=>{if(!down)return;const moved=Math.hypot(e.clientX-down.x,e.clientY-down.y);const b=down.b;down=null;
@@ -2780,23 +2814,23 @@ function click(e){
       snap();S.windows.splice(h.object.userData.win,1);lastDoor=-1;refresh();msg(dr?'Door removed.':'Window removed.');return;}
     if(h.object.userData.edge===undefined){msg(`Click on a wall to place a ${nm}.`);return;}
     placeWindow(h.object.userData.edge,h.point,dr);return;}
-  if(tool==='pushpull'){const h0=pick(e),c0=h0&&objById(h0.object.userData.solid);if(c0&&c0.kind==='curve'){select(c0.id);if(!c0.closed){msg('Push/Pull needs a closed curve (a face). Close or Join it first.');return;}ask('Push/Pull distance (m)','3',v=>{snap();if(!extrudeCurve(objById(c0.id),v)){hist.pop();return'That would go below the ground.';}refresh();msg(`Pulled the ${c0.name.toLowerCase()} up ${v} m into a solid.`);});return;}if(facePick(e))askPush();return;}
+  if(tool==='pushpull'){const h0=pick(e),c0=h0&&objById(h0.object.userData.solid);if(c0&&c0.kind==='curve'){select(c0.id);if(!c0.closed){msg('Push/Pull needs a closed curve (a face). Close or Join it first.');return;}ask('Push/Pull distance (m)','3',v=>{snap();if(!extrudeCurve(objById(c0.id),v)){hist.pop();return'That would go below the ground.';}refresh();msg(`Pulled the ${c0.name.toLowerCase()} up ${fmtL(v)} into a solid.`);});return;}if(facePick(e))askPush();return;}
   if((tool==='select'||tool==='move'||tool==='rotate'||tool==='scale')&&isFacePick(e)){facePick(e);return;}
   if(tool==='rotate'||tool==='scale'||tool==='move'||tool==='copy'||tool==='delete'){const h=pick(e);if(!h){select(null);return;}select(h.object.userData.solid!==undefined?h.object.userData.solid:'bldg');runEdit(tool);return;}
   if(tool==='select'){const h=pick(e);if(!h){if(S.sel&&!postPick){select(null);msg('');}return;}if(S.face){S.face=null;build3D();}
     const hid=h.object.userData.solid!==undefined?h.object.userData.solid:'bldg',mode=selMode(e);if(mode!=='replace'){pickMod(hid,mode);return;}
     if(h.object.userData.solid!==undefined){selectG(h.object.userData.solid);if(S.more.length){msg(`Group of ${plural(selIds().length,'object')} selected.`);return;}const so=selSolid();msg(`${describeSolid(so)}. ${so.kind==='sphere'?'Spheres stay free-form.':so.kind==='brep'?'Explode, Join and the booleans work on it. Make building turns a closed one into walls.':so.kind==='curve'?(so.closed?EXT_HINT()+' Make building turns it into walls.':EXT_HINT()):'Make building turns it into walls, a floor slab and a room.'}`);return;}
     select('bldg');const md=MD;
-    if(h.object.userData.win!==undefined){const w=md.wins[h.object.userData.win];if(w.door){msg(`${DT[w.t].label} door, ${w.w.toFixed(2)} m wide, ${w.head.toFixed(2)} m high, ${DT[w.t].slide?'sliding':`opens ${w.swing==='out'?'out':'in'}`}. ${DOORN[S.keymap].f.join(' and ')} are in the Doors panel.`);return;}msg(`${WT[w.t].label} window, ${w.w.toFixed(2)} m wide, sill ${w.sill.toFixed(2)} m, head ${w.head.toFixed(2)} m.`);return;}
-    const i=h.object.userData.edge,e2=md.E[i];if(i===undefined){msg(`Building: ${md.E.length} walls, ${Math.abs(area(md.offs[md.N])).toFixed(2)} m² floor, ${S.height.toFixed(2)} m high. Click a wall for its assembly.`);return;}wallPick(i);msg(`Wall ${i+1}: ${e2.L.toFixed(2)} m long, ${wallAsmName(i)}, ${Math.round(md.Te[i]*1000)} mm thick, ${md.wins.filter(w=>w.e===i&&!w.door).length} window(s), ${md.wins.filter(w=>w.e===i&&w.door).length} door(s).`);}}
+    if(h.object.userData.win!==undefined){const w=md.wins[h.object.userData.win];if(w.door){msg(`${DT[w.t].label} door, ${fmtL(w.w)} wide, ${fmtL(w.head)} high, ${DT[w.t].slide?'sliding':`opens ${w.swing==='out'?'out':'in'}`}. ${DOORN[S.keymap].f.join(' and ')} are in the Doors panel.`);return;}msg(`${WT[w.t].label} window, ${fmtL(w.w)} wide, sill ${fmtL(w.sill)}, head ${fmtL(w.head)}.`);return;}
+    const i=h.object.userData.edge,e2=md.E[i];if(i===undefined){msg(`Building: ${md.E.length} walls, ${fmtA(Math.abs(area(md.offs[md.N])))} floor, ${fmtL(S.height)} high. Click a wall for its assembly.`);return;}wallPick(i);msg(`Wall ${i+1}: ${fmtL(e2.L)} long, ${wallAsmName(i)}, ${Math.round(md.Te[i]*1000)} mm thick, ${md.wins.filter(w=>w.e===i&&!w.door).length} window(s), ${md.wins.filter(w=>w.e===i&&w.door).length} door(s).`);}}
 let lastDoor=-1;
 function placeWindow(i,pt,door){const md=MD,e=md.E[i],lv=lvAt(pt.y),LH=md.LV[lv].h,W=door?{w:S.doorSize.w,sill:0,head:Math.min(S.doorSize.head,LH-0.15)}:{...S.winSize,head:Math.min(S.winSize.head,LH-0.15)},ty=door?DT[S.doorType]:WT[S.winType],nm=door?'door':'window';const margin=md.T+0.15;
   let s=sOf(e,[pt.x,pt.z]);s=Math.round(s*10)/10;
-  if(e.L<W.w+2*margin){msg(`This wall is ${e.L.toFixed(2)} m long, too short for a ${W.w.toFixed(2)} m ${nm}. Set a smaller Width.`);return;}
+  if(e.L<W.w+2*margin){msg(`This wall is ${fmtL(e.L)} long, too short for a ${fmtL(W.w)} ${nm}. Set a smaller Width.`);return;}
   s=Math.min(Math.max(s,margin+W.w/2),e.L-margin-W.w/2);
   const hit=md.wins.find(w=>w.e===i&&w.lv===lv&&Math.abs(w.s-s)<(w.w+W.w)/2+0.2);if(hit){msg(`That spot overlaps a ${hit.door?'door':'window'}. Click further along the wall.`);return;}
   const L2=lv?{lv}:{};snap();if(door){S.windows.push({e:i,s,t:S.doorType,w:W.w,sill:0,head:W.head,hand:S.doorHand||0,swing:S.doorSwing||'in',...L2});lastDoor=S.windows.length-1;}else S.windows.push({e:i,s,t:S.winType,w:W.w,sill:W.sill,head:W.head,...L2});
-  S.example=false;refresh();msg(door?`${ty.label} door, ${W.w.toFixed(2)} m wide, placed on wall ${i+1}. ${ty.slide?'':`${DOORN[S.keymap].f.join(' or ')} turns it now. `}Click it again to remove it.`:`${ty.label} window, ${W.w.toFixed(2)} m wide, placed on wall ${i+1}. Click it again to remove it.`);}
+  S.example=false;refresh();msg(door?`${ty.label} door, ${fmtL(W.w)} wide, placed on wall ${i+1}. ${ty.slide?'':`${DOORN[S.keymap].f.join(' or ')} turns it now. `}Click it again to remove it.`:`${ty.label} window, ${fmtL(W.w)} wide, placed on wall ${i+1}. Click it again to remove it.`);}
 
 /* ---------- Free solids (massing before anything becomes a building) ---------- */
 let solidSeq=Math.floor(Math.random()*1e5);
@@ -2884,19 +2918,19 @@ function tracedOpPlace(so,pt,door){const g=wallGeom(so);if(!g)return;const nm=do
   if(best<0)return;const a=g.P[best],b=g.P[(best+1)%n],Ls=Math.hypot(b[0]-a[0],b[1]-a[1]),h=so.wall.h;
   const W=door?{w:S.doorSize.w,sill:0,head:Math.min(S.doorSize.head,h-0.15)}:{w:S.winSize.w,sill:S.winSize.sill,head:Math.min(S.winSize.head,h-0.15)},margin=0.1;
   if(W.head-W.sill<0.3){msg(`This wall is ${fmtL(h)} high, too low for a ${nm}. Raise it with Height first.`);return;}
-  if(Ls<W.w+2*margin){msg(`This segment is ${Ls.toFixed(2)} m long, too short for a ${W.w.toFixed(2)} m ${nm}. Set a smaller Width.`);return;}
+  if(Ls<W.w+2*margin){msg(`This segment is ${fmtL(Ls)} long, too short for a ${fmtL(W.w)} ${nm}. Set a smaller Width.`);return;}
   let sv=Math.round(bs*10)/10;sv=Math.min(Math.max(sv,margin+W.w/2),Ls-margin-W.w/2);
   if(g.ops.some(o=>o.i===best&&Math.abs(o.s-sv)<(o.w+W.w)/2+0.1)){msg(`That spot overlaps a ${nm==='door'?'door or window':'window or door'}. Click further along the wall.`);return;}
   let i=best,u=sv/Ls;if(g.rev){i=i===n-1?n-1:n-2-i;u=1-u;}
   snap();so.wall.ops=so.wall.ops||[];so.wall.ops.push(door?{i,u,door:true,t:S.doorType,w:W.w,sill:0,head:W.head,hand:S.doorHand||0,swing:S.doorSwing||'in'}:{i,u,t:S.winType,w:W.w,sill:W.sill,head:W.head});
-  S.example=false;refresh();const ty=door?DT[S.doorType]:WT[S.winType];msg(`${ty.label} ${nm}, ${W.w.toFixed(2)} m wide, placed in the wall. Click it again to remove it.`);}
-function describeSolid(s){if(s.wall){const g=wallGeom(s),pr=PRESETS[s.wall.p];return`Wall (${pr?pr.name.replace(/^Interior: /,'interior '):'custom type'}), ${g?Math.round(g.T*1000):0} mm thick, ${s.wall.h.toFixed(2)} m high, ${curveLen(s).toFixed(2)} m long${s.closed?', closed':''}`;}if(s.kind==='mesh')return`${s.name}${s.src?` (from ${s.src})`:''}, ${s.ntri?plural(s.ntri,'triangle'):''}${s.ntri&&s.nseg?' and ':''}${s.nseg?plural(s.nseg,'line segment'):''}, on layer ${layerPath(OL(objLayer(s)))}`;if(s.kind==='sphere')return`${s.name}, radius ${(s.r*s.sc[0]).toFixed(2)} m`;
-  if(s.kind==='curve')return`${s.closed?'Closed':'Open'} ${s.name.toLowerCase()}, ${curveLen(s).toFixed(2)} m long${s.closed?`, ${Math.abs(area(solidFoot(s))).toFixed(2)} m² inside`:''}`;
+  S.example=false;refresh();const ty=door?DT[S.doorType]:WT[S.winType];msg(`${ty.label} ${nm}, ${fmtL(W.w)} wide, placed in the wall. Click it again to remove it.`);}
+function describeSolid(s){if(s.wall){const g=wallGeom(s),pr=PRESETS[s.wall.p];return`Wall (${pr?pr.name.replace(/^Interior: /,'interior '):'custom type'}), ${g?Math.round(g.T*1000):0} mm thick, ${fmtL(s.wall.h)} high, ${fmtL(curveLen(s))} long${s.closed?', closed':''}`;}if(s.kind==='mesh')return`${s.name}${s.src?` (from ${s.src})`:''}, ${s.ntri?plural(s.ntri,'triangle'):''}${s.ntri&&s.nseg?' and ':''}${s.nseg?plural(s.nseg,'line segment'):''}, on layer ${layerPath(OL(objLayer(s)))}`;if(s.kind==='sphere')return`${s.name}, radius ${fmtL((s.r*s.sc[0]))}`;
+  if(s.kind==='curve')return`${s.closed?'Closed':'Open'} ${s.name.toLowerCase()}, ${fmtL(curveLen(s))} long${s.closed?`, ${fmtA(Math.abs(area(solidFoot(s))))} inside`:''}`;
   if(s.roof)return roofSay(s).replace(/\.$/,'');if(s.stair)return stairSay(s).replace(/\.$/,'');if(s.ramp)return`Ramp, 1:${s.ramp.slope}, rises ${fmtL(s.ramp.rise)} over ${fmtL(s.ramp.L)}, ${fmtL(s.ramp.w)} wide`;
   if(s.rail)return`Railing${s.rail.h?`, ${fmtL(s.rail.h)} high`:''}`;if(s.gableOf)return'Gable walls under the roof (they follow it)';
   if(s.kind==='brep'){const F=s.faces.length;return`${s.name}, ${plural(F,'face')}${s.name==='Solid'?'':brepClosed(s.faces)?', closed':', open'}`;}
   const P=solidFoot(s),xs=P.map(p=>p[0]),zs=P.map(p=>p[1]);
-  return`${s.name}, ${(Math.max(...xs)-Math.min(...xs)).toFixed(2)} × ${(Math.max(...zs)-Math.min(...zs)).toFixed(2)} m, ${(s.h*s.sc[1]).toFixed(2)} m high`;}
+  return`${s.name}, ${fmtN((Math.max(...xs)-Math.min(...xs)))} × ${fmtL((Math.max(...zs)-Math.min(...zs)))}, ${fmtL((s.h*s.sc[1]))} high`;}
 function select(id){if(S.sel===id&&!(S.more||[]).length)return;S.sel=id;S.more=[];S.face=null;build3D();syncRail();updateHint();renderOpts();if(typeof renderOL==='function')renderOL();}
 function cleanFoot(raw,minA=1e-8){
   let P=raw.filter((p,i,a)=>{const q=a[(i+1)%a.length];return Math.hypot(p[0]-q[0],p[1]-q[1])>1e-6;});
@@ -2944,7 +2978,7 @@ function dragTo(e){if(!drag.live){if(Math.hypot(e.clientX-drag.x0,e.clientY-drag
   const r=vp.getBoundingClientRect();tip.hidden=false;tip.style.left=(e.clientX-r.left)+'px';tip.style.top=(e.clientY-r.top)+'px';
   tip.textContent=`Δ ${d[0].toFixed(2)}, ${(-d[2]).toFixed(2)}${d[1]?`, z ${d[1].toFixed(2)}`:''} m`;}
 function endDrag(){const d=drag.d,ck=drag.click;drag=null;tip.hidden=true;if(!d[0]&&!d[1]&&!d[2]){build3D();if(ck)click(ck);return;}
-  snap();moveSel(d[0],d[1],d[2]);refresh();msg(`Moved ${d[0].toFixed(2)} m east, ${(-d[2]).toFixed(2)} m north${d[1]?`, ${d[1].toFixed(2)} m up`:''}.`);}
+  snap();moveSel(d[0],d[1],d[2]);refresh();msg(`Moved ${fmtL(d[0])} east, ${fmtL((-d[2]))} north${d[1]?`, ${fmtL(d[1])} up`:''}.`);}
 window.addEventListener('pointermove',e=>{if(drag)dragTo(e);});
 window.addEventListener('pointerup',()=>{if(drag)endDrag();});
 /* ---------- Gumball: arrows move, the arc rotates, boxes scale, dots extrude. Works in every viewport; locked views only show the handles that make sense there ---------- */
@@ -3083,7 +3117,7 @@ function gumStart(p,e){const t=gumTarget(),h=p.h,v=p.v;ray.setFromCamera(ndc(e,v
 function gumMove(e){const g=gdrag;if(Math.hypot(e.clientX-g.x0,e.clientY-g.y0)>4)g.moved=true;if(!g.moved)return;
   ray.setFromCamera(ndc(e,g.v),g.v.camera);const gr=D.grid||0.001,sn=x=>Math.round(x/gr)*gr,k=g.kind,p=new THREE.Vector3();let txt;
   if(k==='move'||k==='push'||k==='ext'){const t=axisT(ray.ray,g.t.o,g.a);if(t===null)return;g.val=sn(t-g.t0);g.vec.copy(g.a).multiplyScalar(g.val);const D2=g.val*(g.t.sgn||1);
-    txt=k==='push'?`${D2>=0?'Pull out':'Push in'} ${Math.abs(D2).toFixed(2)} m`:k==='ext'?(D2>0?`Extrude ${D2.toFixed(2)} m`:'Drag outward to extrude'):`${axName(g.h.id[1])} ${g.val>=0?'+':''}${g.val.toFixed(2)} m${g.alt?' (copy)':''}`;}
+    txt=k==='push'?`${D2>=0?'Pull out':'Push in'} ${fmtL(Math.abs(D2))}`:k==='ext'?(D2>0?`Extrude ${fmtL(D2)}`:'Drag outward to extrude'):`${axName(g.h.id[1])} ${g.val>=0?'+':''}${fmtL(g.val)}${g.alt?' (copy)':''}`;}
   else if(k==='plane'){if(!ray.ray.intersectPlane(g.plane,p))return;g.vec.subVectors(p,g.p0);g.vec.set(sn(g.vec.x),g.t.b?0:sn(g.vec.y),sn(g.vec.z));
     txt=`Δ ${g.vec.x.toFixed(2)}, ${(-g.vec.z).toFixed(2)}${Math.abs(g.vec.y)>1e-9?`, z ${g.vec.y.toFixed(2)}`:''} m${g.alt?' (copy)':''}`;}
   else if(k==='rot'){if(!ray.ray.intersectPlane(g.plane,p))return;let d=(Math.atan2(-(p.z-g.t.o.z),p.x-g.t.o.x)-g.ang0)*180/Math.PI;d=((d%360)+540)%360-180;
@@ -3095,19 +3129,19 @@ function gumMove(e){const g=gdrag;if(Math.hypot(e.clientX-g.x0,e.clientY-g.y0)>4
 function askPush(){const n=faceName();ask(`${n}: push/pull distance in m (+ out, − in)`,'1',v=>{snap();if(!faceMove(v)){hist.pop();return'That would collapse the face or cross the outline. Try a smaller distance.';}refresh();msg(`${n} ${v>=0?'pulled out':'pushed in'} ${Math.abs(v)} m.`);});}
 function gumAsk(g){const h=g.h,ax=h.id[1],k=g.kind;
   if(k==='push')askPush();
-  else if(k==='ext'){const n=faceName();ask(`Extrude ${n.toLowerCase()} by (m)`,'3',v=>{snap();const c=faceExtrude(v*g.t.sgn);if(!c){hist.pop();return'Extrude distance must be positive and the new solid must stay above ground.';}S.sel=c.id;S.face=null;refresh();msg(`Extruded a ${v} m solid from the ${n.toLowerCase()}. It is selected.`);});}
-  else if(k==='move')ask(`Move along ${axName(ax)} (m)`,'1',v=>{const a=h.ax.clone().applyQuaternion(gumG.quaternion).multiplyScalar(v);snap();moveSel(a.x,a.y,a.z);refresh();msg(`Moved ${v} m along ${axName(ax)}.`);});
+  else if(k==='ext'){const n=faceName();ask(`Extrude ${n.toLowerCase()} by (m)`,'3',v=>{snap();const c=faceExtrude(v*g.t.sgn);if(!c){hist.pop();return'Extrude distance must be positive and the new solid must stay above ground.';}S.sel=c.id;S.face=null;refresh();msg(`Extruded a ${fmtL(v)} solid from the ${n.toLowerCase()}. It is selected.`);});}
+  else if(k==='move')ask(`Move along ${axName(ax)} (m)`,'1',v=>{const a=h.ax.clone().applyQuaternion(gumG.quaternion).multiplyScalar(v);snap();moveSel(a.x,a.y,a.z);refresh();msg(`Moved ${fmtL(v)} along ${axName(ax)}.`);});
   else if(k==='rot')ask('Rotation angle in degrees (counterclockwise)','90',v=>{snap();rotateSel(v);refresh();msg(`Rotated ${v}°.`);});
   else if(k==='scale')ask(`Scale factor along ${axName(ax)}`,'2',v=>{if(v<=0||v>50)return'Scale factor must be more than 0 and at most 50.';snap();if(!scaleAxis(ax,v)){hist.pop();return'That would make a wall shorter than 0.5 m.';}refresh();msg(`Scaled × ${v} along ${axName(ax)}.`);});
   else msg(`Drag a ${GUM[S.keymap]} square to move freely in its plane. Click an arrow, the arc or a box to type an exact value.`);}
 function gumEnd(){const g=gdrag;gdrag=null;tip.hidden=true;
   // a click (no drag) on a handle that sits over another object selects that object, so Shift/Ctrl+click can add it
-  if(!g.moved){build3D();const h=pick(g.ev),id=h&&(h.object.userData.solid!==undefined?h.object.userData.solid:'bldg');if(h&&!selIds().includes(id)){click(g.ev);return;}gumAsk(g);return;}
+  if(!g.moved){build3D();const h=pick(g.ev),id=h&&(h.object.userData.solid!==undefined?h.object.userData.solid:'bldg');if(h&&!selIds().includes(id)&&(g.ev.shiftKey||g.ev.ctrlKey||g.ev.metaKey)){click(g.ev);return;}gumAsk(g);return;}
   Object.assign(S,JSON.parse(g.s0));const k=g.kind,fn=faceName();
   if(k==='scale'?g.val===1:k==='rot'||k==='push'||k==='ext'?!g.val:g.vec.lengthSq()<1e-12){build3D();return;}
   snap();if(!gumApply(g)){hist.pop();Object.assign(S,JSON.parse(g.s0));build3D();msg(k==='ext'?'Drag outward from the face to extrude.':k==='push'?'That would collapse the face or cross the outline.':'That would make a wall shorter than 0.5 m.');return;}refresh();
   const D2=g.val*(g.t.sgn||1);
-  const what=k==='push'?`${fn} ${D2>=0?'pulled out':'pushed in'} ${Math.abs(D2).toFixed(2)} m`:k==='ext'?`Extruded a ${D2.toFixed(2)} m solid from the ${fn.toLowerCase()} (now selected)`:k==='rot'?`Rotated ${g.val}°`:k==='scale'?`Scaled × ${g.val.toFixed(2)} ${g.shift?'in all directions':`along ${axName(g.h.id[1])}`}`:(g.alt?'Copied and moved':'Moved')+(k==='move'?` ${g.val.toFixed(2)} m along ${axName(g.h.id[1])}`:` ${g.vec.x.toFixed(2)} m east, ${(-g.vec.z).toFixed(2)} m north${Math.abs(g.vec.y)>1e-9?`, ${g.vec.y.toFixed(2)} m up`:''}`);
+  const what=k==='push'?`${fn} ${D2>=0?'pulled out':'pushed in'} ${fmtL(Math.abs(D2))}`:k==='ext'?`Extruded a ${fmtL(D2)} solid from the ${fn.toLowerCase()} (now selected)`:k==='rot'?`Rotated ${g.val}°`:k==='scale'?`Scaled × ${g.val.toFixed(2)} ${g.shift?'in all directions':`along ${axName(g.h.id[1])}`}`:(g.alt?'Copied and moved':'Moved')+(k==='move'?` ${fmtL(g.val)} along ${axName(g.h.id[1])}`:` ${fmtL(g.vec.x)} east, ${fmtL((-g.vec.z))} north${Math.abs(g.vec.y)>1e-9?`, ${fmtL(g.vec.y)} up`:''}`);
   msg(`${what} with the ${GUM[S.keymap]}. Click a handle without dragging to type an exact value.`);}
 vp.addEventListener('pointerdown',e=>{if(e.target!==glc||e.button!==0||pp||(tool==='height'&&hl))return;const p=gumPick(e);if(p&&gumStart(p,e)){e.stopImmediatePropagation();e.preventDefault();}},true);
 window.addEventListener('pointermove',e=>{if(gdrag){gumMove(e);return;}if(e.target!==glc||e.buttons){return;}
@@ -3182,7 +3216,7 @@ function ppScale1D(){startPP({kind:'scale',prompts:['Origin point','First refere
 const dist3=(a,b)=>Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]);
 function ppMove(copy){const k=S.keymap;startPP({kind:copy?'copy':'move',prompts:copy?['Point to copy from','Point to copy to']:['Point to move from','Point to move to'],repeat:copy&&k!=='revit',
   apply:P=>{const d=[P[1][0]-P[0][0],P[1][1]-P[0][1],P[1][2]-P[0][2]];if(copy&&!dupSel())return false;return moveSel(d[0],d[1],d[2]);},
-  tip:P=>`${dist3(P[0],P[1]).toFixed(2)} m  (Δ ${(P[1][0]-P[0][0]).toFixed(2)}, ${(P[0][2]-P[1][2]).toFixed(2)}${Math.abs(P[1][1]-P[0][1])>1e-6?`, z ${(P[1][1]-P[0][1]).toFixed(2)}`:''})`,
+  tip:P=>`${fmtL(dist3(P[0],P[1]))}  (Δ ${(P[1][0]-P[0][0]).toFixed(2)}, ${(P[0][2]-P[1][2]).toFixed(2)}${Math.abs(P[1][1]-P[0][1])>1e-6?`, z ${(P[1][1]-P[0][1]).toFixed(2)}`:''})`,
   after:()=>{if(k!=='sketchup')setTool('select');msg(`${copy?'Copied':'Moved'}. ${k==='sketchup'?'Still in Move: click another object, or press Space for Select.':''}`);}});
   msg(`${copy?'Copy':'Move'}: pick the point to ${copy?'copy':'move'} from. Type x,y for an exact point${copy?'; Enter ends the copies':''}.`);}
 function ppRotate(){startPP({kind:'rotate',prompts:['Center of rotation (Enter for the object\'s center)','Angle, or first reference point','Second reference point'],
@@ -4291,7 +4325,7 @@ function cmdOffset(){if(!needPick('offset','curves to offset'))return;const cs=s
   ask(`Offset distance (m, ${cs.length>1?'+ outward or left, − inward or right':s.closed?'+ outward, − inward':'+ to the left, − to the right'})`,'1',d=>{const out=[];
     for(const s of cs){let P=solidFoot(s),Q;
       if(s.closed){if(area(P)<0)P=P.slice().reverse();Q=offsetPoly(P,edgesOf(P),-d);if(!footOK(Q,true))return'That distance collapses '+(cs.length>1?'one of the curves':'the curve')+'. Try a smaller one.';}else Q=offsetOpen(P,d);out.push([s,Q]);}
-    snap();const nw=out.map(([s,Q])=>{const c=newCurve(s.name,Q,!!s.closed,s.pos[1]);S.solids.push(c);return c.id;});setSelIds(nw);refresh();msg(`Offset ${d} m. ${nw.length>1?`The ${nw.length} new curves are`:'The new curve is'} selected.`);});}
+    snap();const nw=out.map(([s,Q])=>{const c=newCurve(s.name,Q,!!s.closed,s.pos[1]);S.solids.push(c);return c.id;});setSelIds(nw);refresh();msg(`Offset ${fmtL(d)}. ${nw.length>1?`The ${nw.length} new curves are`:'The new curve is'} selected.`);});}
 function filletPts(P,closed,r){const n=P.length,out=[];
   for(let i=0;i<n;i++){const p=P[i];if(!closed&&(i===0||i===n-1)){out.push(p);continue;}const a=P[(i-1+n)%n],b=P[(i+1)%n];
     let u=[a[0]-p[0],a[1]-p[1]],v=[b[0]-p[0],b[1]-p[1]];const lu=Math.hypot(...u),lv=Math.hypot(...v);u=[u[0]/lu,u[1]/lu];v=[v[0]/lv,v[1]/lv];
@@ -4303,7 +4337,7 @@ function filletPts(P,closed,r){const n=P.length,out=[];
 function cmdFillet(){if(!needPick('fillet','a polyline, rectangle or extrusion to round'))return;const objs=selObjs().filter(o=>o.kind==='curve'||o.kind==='extrude');
   if(!objs.length){msg('Fillet rounds the corners of curves and extrusions. Select one of those.');return;}
   ask('Fillet radius (m)','0.5',r=>{if(r<=0||r>50)return'Radius must be more than 0.';snap();for(const s of objs){const Q=filletPts(solidFoot(s),s.kind==='extrude'||s.closed,r);setFoot(s,Q);}refresh();
-    msg(`Rounded every corner with a ${r} m radius${objs.length>1?` on ${plural(objs.length,'object')}`:''}.`);});}
+    msg(`Rounded every corner with a ${fmtL(r)} radius${objs.length>1?` on ${plural(objs.length,'object')}`:''}.`);});}
 function cmdGroup(){if(!needPick('group','objects to group'))return;const objs=selObjs();if(objs.length<2){msg('Select at least two objects to group.');return;}
   snap();const g='g'+(++grpSeq);objs.forEach(o=>o.grp=g);refresh();msg(`Grouped ${plural(objs.length,'object')}. Clicking any of them now selects the whole group.`);}
 function cmdUngroup(){if(!needPick('ungroup','a group'))return;const objs=selObjs().filter(o=>o.grp);if(!objs.length){msg('Nothing selected is in a group.');return;}
@@ -4317,12 +4351,12 @@ function cmdUnlock(){const h=S.solids.filter(o=>o.locked);if(!h.length){msg('Not
 function cmdSelAll(){const ids=[...(S.pts&&layerOn('walls')&&!layerLocked('walls')?['bldg']:[]),...S.solids.filter(o=>!objHidden(o)&&!objLocked(o)).map(o=>o.id)];setSelIds(ids);S.face=null;build3D();syncRail();updateHint();renderOpts();msg(`${plural(ids.length,'object')} selected.`);}
 function cmdDistance(){startPP({kind:'distance',prompts:['First point','Second point'],apply:P=>{const d=dist3(P[0],P[1]);
     setTimeout(()=>msg(`Distance ${fmtL(d)}. Δx ${fmtL(P[1][0]-P[0][0])}, Δy ${fmtL(P[0][2]-P[1][2])}, Δz ${fmtL(P[1][1]-P[0][1])}.`));return false;},
-    tip:P=>`${dist3(P[0],P[1]).toFixed(3)} m`,after:()=>setTool('select')});msg('Pick the first point to measure from.');}
+    tip:P=>`${fmtL(dist3(P[0],P[1]))}`,after:()=>setTool('select')});msg('Pick the first point to measure from.');}
 function cmdArea(){if(!needPick('area','objects to measure'))return;const out=[];
-  for(const id of selIds()){if(id==='bldg'){const md=MD||model();out.push(`building floor ${Math.abs(area(md.offs[md.N])).toFixed(2)} m², footprint ${Math.abs(area(S.pts)).toFixed(2)} m²`);continue;}
+  for(const id of selIds()){if(id==='bldg'){const md=MD||model();out.push(`building floor ${fmtA(Math.abs(area(md.offs[md.N])))}, footprint ${fmtA(Math.abs(area(S.pts)))}`);continue;}
     const s=objById(id);if(!s)continue;
-    if(s.kind==='curve'){out.push(s.closed?`${s.name.toLowerCase()} encloses ${Math.abs(area(solidFoot(s))).toFixed(2)} m²`:`${s.name.toLowerCase()} is open (${curveLen(s).toFixed(2)} m long), so it has no area`);continue;}
-    const A=objFaces(s).reduce((t,f)=>t+faceArea(f),0);out.push(`${s.name.toLowerCase()} surface ${A.toFixed(2)} m²${s.kind==='extrude'?`, footprint ${Math.abs(area(solidFoot(s))).toFixed(2)} m²`:''}`);}
+    if(s.kind==='curve'){out.push(s.closed?`${s.name.toLowerCase()} encloses ${fmtA(Math.abs(area(solidFoot(s))))}`:`${s.name.toLowerCase()} is open (${fmtL(curveLen(s))} long), so it has no area`);continue;}
+    const A=objFaces(s).reduce((t,f)=>t+faceArea(f),0);out.push(`${s.name.toLowerCase()} surface ${fmtA(A)}${s.kind==='extrude'?`, footprint ${fmtA(Math.abs(area(solidFoot(s))))}`:''}`);}
   msg(`Area: ${out.join('; ')}.`);}
 function redo(){const h=redoStack.pop();if(!h){msg('Nothing to redo.');return;}const cur=stateJSON(),to=JSON.parse(h),d=stDiff(JSON.parse(cur),to);hist.push(histEntry(cur,h.lbl));Object.assign(S,to);refresh();msg(undoMsg('Redone',h.lbl,d));}
 const CMD={tobuilding:()=>partsCmd(PARTF||'auto'),loft:cmdLoft,revolve:cmdRevolve,sweep:cmdSweep,zoomsel:()=>zoomSelected(false),line:()=>{setTool('sketch');startShape('line');},explode:cmdExplode,cap:cmdCap,planarsrf:cmdPlanarSrf,wallcrv:cmdWallCrv,join:cmdJoin,union:()=>cmdBool('union'),difference:()=>cmdBool('difference'),intersection:()=>cmdBool('intersection'),
@@ -4403,7 +4437,7 @@ function run(raw){const v=raw.trim();cmdIn.value='';
       const c=sk.cur&&Math.hypot(sk.cur[0]-a[0],sk.cur[1]-a[1])>1e-6?sk.cur:[a[0]+1,a[1]];const m=Math.hypot(c[0]-a[0],c[1]-a[1]);
       addPoint([a[0]+(c[0]-a[0])/m*nums[0],a[1]+(c[1]-a[1])/m*nums[0]]);return;}
     if(sk&&!sk.pts.length&&nums.length===2){addPoint([nums[0],-nums[1]]);msg(`Started at ${nums0[0]},${nums0[1]}.`);return;}
-    if(tool==='move'&&nums.length===2){if(!needSel('move'))return;snap();moveSel(nums[0],0,-nums[1]);refresh();msg(`Moved ${nums[0]} m east, ${nums[1]} m north.`);return;}
+    if(tool==='move'&&nums.length===2){if(!needSel('move'))return;snap();moveSel(nums[0],0,-nums[1]);refresh();msg(`Moved ${fmtL(nums[0])} east, ${fmtL(nums[1])} north.`);return;}
     if(nums.length===1&&tool==='height'){setHeight(nums[0]);return;}
     msg('A number needs a command first, for example a height after the Height tool or a length while sketching.');return;}
   const lv=v.toLowerCase();
@@ -4455,7 +4489,7 @@ function exec(id){if(id!==extArm)extArm=false;if(id!=='undo'&&id!=='redo'){const
     if(so.kind==='sphere'||(so.kind==='curve'&&!so.closed)){msgExtra=` ${so.kind==='curve'?'An open curve can\'t enclose a room. Close it or Join it first.':'A sphere has no straight sides to make walls from. Use a box, an extrusion, a Boolean result or a closed curve.'}`;return;}
     if(so.kind==='curve'){so=Object.assign(clone(so),{kind:'extrude',h:S.height||3.2});so.id=selSolid().id;}
     if(so.pos[1]>0.01){msgExtra=' Move it down to the ground first. Buildings sit at ground level.';return;}
-    const H=so.h*so.sc[1];if(H<2.4){msgExtra=` It is ${H.toFixed(2)} m high and walls need at least 2.40 m. Use Height first.`;return;}
+    const H=so.h*so.sc[1];if(H<2.4){msgExtra=` It is ${fmtL(H)} high and walls need at least 2.40 m. Use Height first.`;return;}
     const P=cleanFoot(solidFoot(so),1);if(typeof P==='string'){msgExtra=' '+P;return;}
     snap();let back='';if(S.pts){S.solids.push(newSolid('Extrusion',S.pts,S.height));back=' The previous building went back to being a solid.';}
     S.solids=S.solids.filter(o=>o.id!==so.id);if(hideId){const ho=objById(hideId);if(ho)ho.hidden=true;}S.pts=P;S.height=Math.min(12,rnd3(H));S.built=true;S.windows=[];S.wallAsm={};S.roomNames=[];S.levels=null;S.sel='bldg';S.example=false;refresh();setTool('select');
@@ -4473,7 +4507,7 @@ function runEdit(t){
   if(t==='pushpull'){if(curFace()){askPush();return;}
     // something already selected: push/pull that, as SketchUp does with a preselected face, instead of asking for a pick
     const so=selObjs().length===1?selSolid():null;
-    if(so&&so.kind==='curve'&&so.closed&&!so.wall&&!so.txt&&!so.dim){ask('Push/Pull distance (m)','3',v=>{snap();if(!extrudeCurve(objById(so.id),v)){hist.pop();return'That would go below the ground.';}refresh();msg(`Pulled the ${so.name.toLowerCase()} up ${v} m into a solid.`);});return;}
+    if(so&&so.kind==='curve'&&so.closed&&!so.wall&&!so.txt&&!so.dim){ask('Push/Pull distance (m)','3',v=>{snap();if(!extrudeCurve(objById(so.id),v)){hist.pop();return'That would go below the ground.';}refresh();msg(`Pulled the ${so.name.toLowerCase()} up ${fmtL(v)} into a solid.`);});return;}
     if(so&&so.kind==='extrude'){S.face={k:'top'};build3D();askPush();return;}
     return;}
   if(!needSel(t))return;
@@ -4511,14 +4545,14 @@ function setHeight(v){if(!isFinite(v))return;if(hl){Object.assign(S,JSON.parse(h
   // several things selected: extrude every curve and set every solid's height in one step
   const many=selObjs();if(many.length>1){const cv=many.filter(o=>o.kind==='curve'),ex=many.filter(o=>o.kind==='extrude');if(!cv.length&&!ex.length){msg('Use Push/Pull or Scale on surfaces and spheres.');return;}
     if(ex.length&&(v<0.1||v>100)){msg('Height must be between 0.1 and 100 m.');return;}snap();let n=0;for(const o of cv)if(o.wall){o.wall.h=rnd4(Math.max(0.1,v));n++;}else if(extrudeKeep(o,v))n++;for(const o of ex){o.h=v/o.sc[1];n++;}
-    if(!n){hist.pop();msg('Those extrusions would go below the ground.');return;}refresh();if(tool==='height')setTool('select');msg(`${cv.length?`Extruded ${plural(cv.length,'curve')} ${v.toFixed(2)} m`:''}${cv.length&&ex.length?' and ':''}${ex.length?`set ${plural(ex.length,'solid')} to ${v.toFixed(2)} m high`:''}.`.replace(/^s/,'S'));return;}
+    if(!n){hist.pop();msg('Those extrusions would go below the ground.');return;}refresh();if(tool==='height')setTool('select');msg(`${cv.length?`Extruded ${plural(cv.length,'curve')} ${fmtL(v)}`:''}${cv.length&&ex.length?' and ':''}${ex.length?`set ${plural(ex.length,'solid')} to ${fmtL(v)} high`:''}.`.replace(/^s/,'S'));return;}
   const so=selSolid();
   if(so&&so.wall){if(v<0.1||v>100){msg('Height must be between 0.1 and 100 m.');return;}snap();so.wall.h=rnd4(v);refresh();if(tool==='height')setTool('select');msg(`Wall height set to ${fmtL(v)}.`);return;}
-  if(so&&so.kind==='curve'){snap();if(!extrudeKeep(so,v)){hist.pop();msg('That extrusion would go below the ground.');return;}refresh();if(tool==='height')setTool('select');msg(`Extruded ${v.toFixed(2)} m into ${so.kind==='brep'?'a surface':'a solid'}.`);return;}
+  if(so&&so.kind==='curve'){snap();if(!extrudeKeep(so,v)){hist.pop();msg('That extrusion would go below the ground.');return;}refresh();if(tool==='height')setTool('select');msg(`Extruded ${fmtL(v)} into ${so.kind==='brep'?'a surface':'a solid'}.`);return;}
   if(so&&(so.kind==='brep'||so.kind==='mesh')){msg(so.kind==='mesh'?'Imported objects change size with Scale (Height mode for height only).':'Use Push/Pull or Scale on surfaces and polysurfaces.');return;}
-  if(so){if(so.kind==='sphere'){msg('Spheres change size with Scale.');return;}if(v<0.1||v>100){msg('Height must be between 0.1 and 100 m.');return;}snap();so.h=v/so.sc[1];refresh();if(tool==='height')setTool('select');msg(`${so.name} height set to ${v.toFixed(2)} m.`);return;}
+  if(so){if(so.kind==='sphere'){msg('Spheres change size with Scale.');return;}if(v<0.1||v>100){msg('Height must be between 0.1 and 100 m.');return;}snap();so.h=v/so.sc[1];refresh();if(tool==='height')setTool('select');msg(`${so.name} height set to ${fmtL(v)}.`);return;}
   v=Math.min(HMAX(),Math.max(2.4,v));if(!S.pts)return;snap();S.height=Math.round(v*100)/100;refresh();
-  if(tool==='height')setTool('select');msg(`Wall height set to ${S.height.toFixed(2)} m.`);}
+  if(tool==='height')setTool('select');msg(`Wall height set to ${fmtL(S.height)}.`);}
 /* ExtrudeCrv / EXTRUDE / Extrusion / Height follows the mouse: the selection grows up or down with the cursor (measured on a vertical line through it,
    so use a 3D or elevation view), a click sets it, or type the distance. Snaps set the height from the snapped point. */
 var hl=null;
@@ -4535,7 +4569,7 @@ glc.addEventListener('pointermove',e=>{if(tool!=='height'||pp||gdrag){if(hl&&too
   Object.assign(S,JSON.parse(hl.s0));const h=hlDist(e);hl.h=null;
   if(h===null){build3D();const r=vp.getBoundingClientRect();tip.hidden=false;tip.style.left=(e.clientX-r.left)+'px';tip.style.top=(e.clientY-r.top)+'px';tip.textContent='Use a 3D or elevation view to drag the height, or type it';return;}
   hl.h=h;hlApply(h);build3D();const r=vp.getBoundingClientRect();tip.hidden=false;tip.style.left=(e.clientX-r.left)+'px';tip.style.top=(e.clientY-r.top)+'px';
-  tip.textContent=(osHit?SB[S.keymap].os[OSN[osHit.k]]+' · ':'')+(hl.t.b?`Wall height ${S.height.toFixed(2)} m`:`${h.toFixed(2)} m`);});
+  tip.textContent=(osHit?SB[S.keymap].os[OSN[osHit.k]]+' · ':'')+(hl.t.b?`Wall height ${fmtL(S.height)}`:`${fmtL(h)}`);});
 $('#cmdForm').addEventListener('submit',e=>{e.preventDefault();run(cmdIn.value);});
 cmdIn.addEventListener('keydown',e=>{
   if(e.key==='Tab'&&S.keymap==='revit'&&!cmdIn.value){e.preventDefault();faceArm=!faceArm;msg(faceArm?'Tab: the next click picks a face, as Tab cycles to a face in Revit.':'Face picking off.');return;}
@@ -4903,14 +4937,14 @@ function asmCmd(lk){const k=['roofs','roofslab','roofstyle','roofassembly','roof
 
 // windows
 const wtBox=$('#winType');
-for(const[k,v]of Object.entries(WT)){const b=document.createElement('button');b.dataset.w=k;b.textContent=v.label;b.title=`${v.w} m wide, sill ${v.sill} m, head ${v.head} m`;b.dataset.tt=b.title;
+for(const[k,v]of Object.entries(WT)){const b=document.createElement('button');b.dataset.w=k;b.textContent=v.label;b.title=`${fmtL(v.w)} wide, sill ${fmtL(v.sill)}, head ${fmtL(v.head)}`;b.dataset.tt=b.title;
   b.addEventListener('click',()=>{setWinType(k);if(hasWalls())setTool('window');});wtBox.appendChild(b);}
 function syncWin(){wtBox.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.w===S.winType)));const v=WT[S.winType],W=S.winSize;
-  $('#winNote').textContent=`${v.label}: ${W.w.toFixed(2)} m wide, sill ${W.sill.toFixed(2)} m, head ${W.head.toFixed(2)} m. Change sizes in the command bar while placing. The opening cuts through every layer of the assembly.`;
+  $('#winNote').textContent=`${v.label}: ${fmtL(W.w)} wide, sill ${fmtL(W.sill)}, head ${fmtL(W.head)}. Change sizes in the command bar while placing. The opening cuts through every layer of the assembly.`;
   $('#winCount').textContent=S.built?`${S.windows.filter(w=>!isDoor(w)).length} placed`:'';updateHint();save();}
 // doors
 const dtBox=$('#doorType');
-for(const[k,v]of Object.entries(DT)){const b=document.createElement('button');b.dataset.d=k;b.textContent=v.label;b.title=`${v.w} m wide, ${v.head} m high${v.slide?', sliding':''}`;b.dataset.tt=b.title;
+for(const[k,v]of Object.entries(DT)){const b=document.createElement('button');b.dataset.d=k;b.textContent=v.label;b.title=`${fmtL(v.w)} wide, ${fmtL(v.head)} high${v.slide?', sliding':''}`;b.dataset.tt=b.title;
   b.addEventListener('click',()=>{setDoorType(k);if(hasWalls())setTool('door');});dtBox.appendChild(b);}
 $('#doorFlip').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>doorFlip(b.dataset.f)));
 function setDoorType(k){S.doorType=k;const t=DT[k];S.doorSize={w:t.w,head:Math.min(t.head,S.height-0.15)};syncDoor();renderOpts();}
@@ -4921,7 +4955,7 @@ function doorFlip(f){if(f==='hand')S.doorHand=S.doorHand?0:1;else S.doorSwing=S.
   syncDoor();renderOpts();msg(m);}
 function syncDoor(){dtBox.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.d===S.doorType)));const v=DT[S.doorType],W=S.doorSize,N=DOORN[S.keymap]||DOORN.rhino;
   const fb=$('#doorFlip').querySelectorAll('button');fb[0].textContent=N.f[0];fb[1].textContent=N.f[1];fb.forEach(b=>b.disabled=!!v.slide);
-  $('#doorNote').textContent=`${N.t} ${v.label}: ${W.w.toFixed(2)} m wide, ${W.head.toFixed(2)} m high${v.slide?', two panels sliding in the wall':`, hinged at the ${S.doorHand?'end':'start'} of the wall, opens ${S.doorSwing}`}. Doors sit on the floor and cut through every layer of the wall.`;
+  $('#doorNote').textContent=`${N.t} ${v.label}: ${fmtL(W.w)} wide, ${fmtL(W.head)} high${v.slide?', two panels sliding in the wall':`, hinged at the ${S.doorHand?'end':'start'} of the wall, opens ${S.doorSwing}`}. Doors sit on the floor and cut through every layer of the wall.`;
   $('#doorCount').textContent=S.built?`${S.windows.filter(isDoor).length} placed`:'';updateHint();save();}
 
 /* ---------- Drawings ---------- */
@@ -5053,7 +5087,7 @@ function tbDraw(c,t,w,h){t=UC(t);const m=PMG,v=VCTX,cv=c.canvas;if(!tbShown()){c
   const tot=cells.reduce((a,c2)=>a+c2[2],0);let x=x0;
   cells.forEach(([cap,txt,wt,b],i)=>{const cw=(x1-x0)*wt/tot;if(i){c.beginPath();c.moveTo(x+0.5,y0);c.lineTo(x+0.5,y0+TBH);c.stroke();}
     c.textAlign='left';c.textBaseline='top';c.font=`500 ${fz(6)}px ${FL}`;c.fillStyle=MUTED;c.fillText(UC(cap),x+fz(5),y0+fz(4));
-    c.textBaseline='alphabetic';c.font=`${b?600:400} ${fz(b?10:8.5)}px ${FL}`;c.fillStyle=b?INK:MUTED;let s2=b?String(txt):UC(String(txt));while(s2.length>3&&c.measureText(s2).width>cw-fz(10))s2=s2.slice(0,-2)+'…';
+    c.textBaseline='alphabetic';c.font=`${b?600:400} ${fz(b?10:8.5)}px ${FL}`;c.fillStyle=b?INK:MUTED;let s2=b?String(txt):UC(String(txt));for(let _q=0;_q<300&&s2.length>3&&c.measureText(s2).width>cw-fz(10);_q++)s2=s2.slice(0,-2)+'\u2026';
     c.fillText(s2,x+fz(5),y0+TBH-fz(6));x+=cw;});
   cv._TB=[x0,y0,x1,y0+TBH];LBL.push([x0,y0-2,x1,h]);c.fillStyle=INK;}
 
@@ -8948,7 +8982,7 @@ function frRender(){let c=$('#frCard');const show=frFree();if(!show){if(c)c.hidd
   c.hidden=false;const scanned=FR.sig===frSig(),fmt=y=>(y>=0?'+':'')+fmtL(y);
   const have=y=>vOf('plan').some(v=>!v.site&&Math.abs((+v.cut||0)-(y+1.2))<0.05);
   c.innerHTML=`<div class="frh"><b>Ready for drawings</b></div><p class="note" style="margin:0 0 6px">No walls or floors are assigned in this model. Plans, sections and elevations still cut whatever is there; these steps help them read well. All optional.</p>
-    ${scanned?`<div class="frsec"><h5>Levels found</h5>${FR.lv.length?FR.lv.map((l,i)=>`<label class="frrow"><input type="checkbox" data-fl="${i}" ${have(l.y)?'disabled':'checked'}> ${fmt(l.y)}<em>${have(l.y)?'has a plan':Math.round(l.a)+' m² of flat surface'}</em></label>`).join('')+`<div class="frbtn"><button type="button" class="ghost" id="frPlans">Make plans at these levels</button></div>`:'<p class="note" style="margin:0">No large flat surfaces, so no levels to suggest. Add a plan at any height with New plan.</p>'}</div>
+    ${scanned?`<div class="frsec"><h5>Levels found</h5>${FR.lv.length?FR.lv.map((l,i)=>`<label class="frrow"><input type="checkbox" data-fl="${i}" ${have(l.y)?'disabled':'checked'}> ${fmt(l.y)}<em>${have(l.y)?'has a plan':fmtA(l.a)+' of flat surface'}</em></label>`).join('')+`<div class="frbtn"><button type="button" class="ghost" id="frPlans">Make plans at these levels</button></div>`:'<p class="note" style="margin:0">No large flat surfaces, so no levels to suggest. Add a plan at any height with New plan.</p>'}</div>
     <div class="frsec"><h5>Open surfaces</h5>${FR.open.length?`<p style="margin:0">${plural(FR.open.length,'object')} ${FR.open.length>1?'are':'is'} open, so sections show ${FR.open.length>1?'them':'it'} as thin lines instead of solid cuts.</p><div class="frbtn"><button type="button" class="ghost" id="frSel">Select them</button><button type="button" class="ghost" id="frCap">Cap them</button></div>`:'<p class="note" style="margin:0">Every object is closed, so cuts show as solid.</p>'}</div>
     <div class="frsec"><h5>Layer names</h5>${FR.lays.length?FR.lays.map(l=>`<div class="frrow">${hx(l.name)}<em>looks like ${l.as.toLowerCase()}</em></div>`).join('')+'<div class="frbtn"><button type="button" class="ghost" id="frParts">Turn these into walls, floors and roofs</button></div><p class="note" style="margin:4px 0 0">Real walls, floors and roofs get hatches, symbols and schedules. The originals are hidden, not deleted.</p>':'<p class="note" style="margin:0">No layer names that look like walls, floors, roofs, windows or doors.</p>'}</div>`
     :`<div class="frbtn"><button type="button" class="ghost" id="frScanB">Check the model</button></div>`}`;
@@ -9058,7 +9092,7 @@ function dwNavRender(){const L=$('#dwList');if(!L)return;const q=($('#dwQ').valu
   else{const W=CVW(),cams=(S.cams||[]).filter(c=>ok(c.name));
     h+=`<div class="dwg"><span>${hx(W.t)}</span></div>`+(cams.map(c=>`<button type="button" class="dwi" data-cam="${hx(c.id)}"><span class="dwth">${CAMI[c.id]?`<img alt="" src="${CAMI[c.id]}">`:dwI('cube',16)}</span><span class="dwtx"><b>${hx(c.name)}</b><small>Opens in the model</small></span></button>`).join('')
       ||`<p class="dwe">${q&&(S.cams||[]).length?'No match.':`No saved views yet. In the model, ${hx(W.save)} saves one; it shows here with its picture.`}</p>`);
-    const lv=levelsOf();h+='<div class="dwg"><span>Levels</span></div>'+lv.map((l,k)=>ok(l.name||'')?`<button type="button" class="dwi" data-lv="${k}"><span class="dwth">${dwI('level',16)}</span><span class="dwtx"><b>${hx(l.name||'Level '+(k+1))}</b><small>${(+l.y||0).toFixed(2)} m · opens its plan</small></span></button>`:'').join('');}
+    const lv=levelsOf();h+='<div class="dwg"><span>Levels</span></div>'+lv.map((l,k)=>ok(l.name||'')?`<button type="button" class="dwi" data-lv="${k}"><span class="dwth">${dwI('level',16)}</span><span class="dwtx"><b>${hx(l.name||'Level '+(k+1))}</b><small>${fmtL((+l.y||0))} · opens its plan</small></span></button>`:'').join('');}
   if(L.innerHTML!==h)L.innerHTML=h;}
 dwNav.querySelector('.dwtabs').addEventListener('click',e=>{const b=e.target.closest('[data-t]');if(!b)return;dwNT=b.dataset.t;dwNavRender();});
 $('#dwQ').addEventListener('input',dwNavRender);
@@ -9074,7 +9108,7 @@ $('#dwNavX').addEventListener('click',()=>{PRF.dwNav='h';prfSave();dwApply();msg
 function dwPanel(){const b=$('#dwPb');if(!b)return;const v=vById(sxTab);document.querySelectorAll('#dwPs [data-p]').forEach(x=>x.setAttribute('aria-selected',String(x.dataset.p===dwPT)));
   if(b.contains(document.activeElement)&&document.activeElement.tagName==='INPUT')return;
   const sel=s=>{const o=$(s);return o&&o.selectedOptions[0]?o.selectedOptions[0].text:'';};let h='';
-  if(dwPT==='sh'){if(!v)h='<p>Pick a drawing on the left.</p>';else{const st=stypeOf(v),sc=v.scope==='all'||v.site?'Everything that is on':`The building + ${v.near!=null?v.near:3} m`;
+  if(dwPT==='sh'){if(!v)h='<p>Pick a drawing on the left.</p>';else{const st=stypeOf(v),sc=v.scope==='all'||v.site?'Everything that is on':`The building + ${fmtL(v.near!=null?v.near:3)}`;
     h=`<div class="dwf"><span>Number</span><em>${hx(vNum(v.id))}</em><button type="button" class="ghost" data-d="tb" title="Number, title and project in the title block">Title block…</button></div>
       <label class="dwf"><span>Name</span><input type="text" id="dwName" value="${hx(v.name)}" maxlength="60"><i></i></label>
       <div class="dwf"><span>Paper</span><em>${hx((()=>{const P=paperOf(v);return`${PAPERN[P.key]||P.key} ${P.ori==='p'?'portrait':'landscape'}`;})())}</em><button type="button" class="ghost" data-d="paper">Change</button></div>
@@ -11658,6 +11692,85 @@ sxCv.parentElement.addEventListener('wheel',e=>{if(!sxFrame||e.target!==sxCv)ret
   v.pan=[rnd3(p[0]-e.deltaX*k/T.sc),rnd3(p[1]-e.deltaY*k/T.sc)];
   if(!FRW.raf)FRW.raf=requestAnimationFrame(()=>{FRW.raf=0;sxRedraw();});clearTimeout(FRW.t);FRW.t=setTimeout(()=>{save();drawCur(v.kind);},400);},{capture:true,passive:false});
 
+
+/* ---------- Student tester fixes A (2026-10-21) ---------- */
+// Welcome: pick every program you know; the main one sets the controls, the others' command names win over the rest
+WLC.also=WLC.also||[];if(!PRF.welcomed)WLC.fresh=true;
+{const _ow=openWelcome;openWelcome=function(){WLC.fresh=!PRF.welcomed;WLC.also=(!PRF.knowNone&&Array.isArray(PRF.knows)?PRF.knows:[]).filter(k=>k!==S.keymap&&KM[k]);return _ow.apply(this,arguments);};}
+function wlcMulti(){const box=$('#wlcKnow');if(!box)return;const none=WLC.know==='none';WLC.also=(WLC.also||[]).filter(k=>KM[k]&&k!==WLC.know);if(none)WLC.also=[];
+  box.querySelectorAll('button[data-k]').forEach(b=>{const k=b.dataset.k,main=k===WLC.know,also=WLC.also.includes(k);b.removeAttribute('role');b.removeAttribute('aria-checked');b.setAttribute('aria-pressed',String(main||also));
+    const t=b.querySelector('b');if(t&&!t.querySelector('.wtag')&&(main||also)&&k!=='none'&&(WLC.also.length||also))t.insertAdjacentHTML('beforeend',`<span class="wtag${main?'':' also'}">${main?'Main':'Also'}</span>`);
+    b.onclick=()=>{if(WLC.fresh){WLC.fresh=false;WLC.know=k;WLC.also=[];}else if(k==='none'){WLC.know='none';WLC.also=[];}else if(WLC.know==='none'){WLC.know=k;WLC.also=[];}
+      else if(k===WLC.know){if(WLC.also.length)WLC.know=WLC.also.shift();}else if(WLC.also.includes(k))WLC.also=WLC.also.filter(x=>x!==k);else WLC.also.push(k);renderWelcome();};});
+  // the program to learn can't be one you already know
+  if(WLC.also.includes(WLC.learn)){WLC.learn='';renderWelcome();return;}
+  $('#wlcLearn').querySelectorAll('button[data-l]').forEach(b=>{if(WLC.also.includes(b.dataset.l))b.remove();});
+  const mn=$('#wlcMain');if(mn){if(WLC.also.length&&!none){mn.hidden=false;mn.innerHTML=`Controls, shortcuts and mouse from <select id="wlcMainSel" aria-label="Main program">${[WLC.know,...WLC.also].map(k=>`<option value="${k}" ${k===WLC.know?'selected':''}>${KM[k]}</option>`).join('')}</select> <span>Commands typed the ${WLC.also.map(k=>KM[k]).join(' or ')} way work too.</span>`;
+    $('#wlcMainSel').onchange=e=>{const k=e.target.value;WLC.also=[WLC.know,...WLC.also].filter(x=>x!==k);WLC.know=k;renderWelcome();};}else{mn.hidden=true;mn.innerHTML='';}}
+  const sm=$('#wlcSum');if(sm&&WLC.also.length&&!none&&!/also know/.test(sm.textContent))sm.textContent=sm.textContent.replace(/\.?$/,`. You also know ${WLC.also.map(k=>KM[k]).join(' and ')}.`);}
+{const _rw=renderWelcome;renderWelcome=function(){const r=_rw.apply(this,arguments);try{wlcMulti();}catch(e){}return r;};}
+$('#wlcGo').addEventListener('click',()=>{PRF.knows=WLC.know==='none'?[]:[WLC.know,...(WLC.also||[])].filter(k=>KM[k]);prfSave();},true);
+// typed command names: your main program first, then the others you know, then everyone else
+{const _lk=lookup;lookup=function(v){const r=_lk(v);if(!r||!r.k||r.k===S.keymap)return r;const w=String(v).toLowerCase().replace(/\s+/g,'');
+  for(const k of (PRF.knows||[])){if(k===S.keymap||!KM[k])continue;const t=TOOLS.find(t=>t.alias&&t.alias[k]&&t.alias[k].includes(w));if(t)return{t,k};}return r;};}
+// Welcome close button: keeps the current settings, like Escape
+$('#wlcX').addEventListener('click',()=>{const d=$('#wlcDlg');PRF.welcomed=true;prfSave();try{d.close();}catch(e){d.removeAttribute('open');}});
+// the sample studio is opened on purpose, as its own project
+let SAMPLEQ=false;
+{const _ow=openWelcome;openWelcome=function(){if(SAMPLEQ&&WLCPJ){SAMPLEQ=false;WLCPJ=false;try{uiTouch();}catch(e){}return;}return _ow.apply(this,arguments);};}
+function openSample(){if(typeof projNew!=='function')return;SAMPLEQ=true;projNew('Sample studio');pjApply({sheetStyle:Object.assign({},S.sheetStyle||{},{project:'Sample studio'})});try{pjWrite(true);projMark();}catch(e){}
+  msg('Sample studio opened as its own project. Change the wall assembly on the right and watch the model and drawings update. Your own project is kept: click the project name at the top to go back.');}
+$('#wlcSample').addEventListener('click',()=>{$('#wlcGo').click();setTimeout(openSample,60);});
+{const _r=run;run=function(raw){if(/^\s*(sample|opensample|samplestudio|example|openexample)\s*$/i.test(raw||'')){cmdIn.value='';openSample();return;}return _r.apply(this,arguments);};}
+
+// Drawing settings: one line per layer, fold arrows for sublayers, find, hide empty
+const VWFOLD=new Set();
+vLayRows=function(v){const hl=new Set(v&&v.hl||[]),cnt={};for(const o of S.solids){const id=objLayer(o);cnt[id]=(cnt[id]||0)+1;}
+  const kids=id=>S.olayers.filter(l=>(l.parent||null)===id&&!l.sys),tot=id=>(cnt[id]||0)+kids(id).reduce((a,l)=>a+tot(l.id),0),out=[];
+  const walk=(id,d,pid)=>{for(const l of kids(id)){const ch=kids(l.id).length>0,n=tot(l.id);
+    out.push(`<label class="vwlrow" data-d="${d}" data-p="${hx(pid||'')}" data-n="${n}" data-name="${hx(LN(l).toLowerCase())}" style="padding-left:${6+d*16}px"><button type="button" class="vwf${ch?'':' no'}" data-f="${hx(l.id)}" aria-label="Fold">${ch?(VWFOLD.has(l.id)?'▸':'▾'):''}</button><input type="checkbox" data-l="${hx(l.id)}" ${hl.has(l.id)?'':'checked'}><i style="background:${hx(l.color||'#888')}"></i><span>${hx(LN(l))}</span><em>${n||''}${layerOn(l.id)?'':'<b title="This layer is switched off in the Layers panel, so it shows nowhere">off</b>'}</em></label>`);walk(l.id,d+1,l.id);}};
+  walk(null,0,'');return out.join('')||'<p class="note">No layers yet.</p>';};
+function vwFilter(){const box=$('#vwLays');if(!box)return;const q=($('#vwLFind').value||'').trim().toLowerCase(),emp=$('#vwLEmpty').checked,rows=[...box.querySelectorAll('.vwlrow')];
+  const byId={};rows.forEach(r=>{byId[r.querySelector('input').dataset.l]=r;});
+  const folded=r=>{let p=r.dataset.p;while(p){if(VWFOLD.has(p))return true;const pr=byId[p];p=pr?pr.dataset.p:'';}return false;};
+  // a match keeps its parents visible so the tree still reads
+  const keep=new Set();if(q)rows.forEach(r=>{if(r.dataset.name.includes(q)){let x=r;while(x){keep.add(x);x=byId[x.dataset.p];}}});
+  rows.forEach(r=>{let h=false;if(q)h=!keep.has(r);else h=folded(r);if(emp&&+r.dataset.n===0)h=true;r.hidden=h;});}
+{const _vd=vDialog;vDialog=function(){const r=_vd.apply(this,arguments);const f=$('#vwLFind'),e=$('#vwLEmpty');if(f){f.value='';f.oninput=vwFilter;}if(e)e.onchange=vwFilter;
+  const box=$('#vwLays');if(box){box.onclick=ev=>{const b=ev.target.closest('.vwf');if(!b)return;ev.preventDefault();ev.stopPropagation();const id=b.dataset.f;if(VWFOLD.has(id))VWFOLD.delete(id);else VWFOLD.add(id);b.textContent=VWFOLD.has(id)?'▸':'▾';vwFilter();};}
+  vwFilter();return r;};}
+
+// Gumball: the middle used for rotating and scaling no longer slides as the object turns.
+// The middle of the object's own box (measured in its own direction) is the same before and after a turn.
+const _scM=new THREE.Matrix4(),_scR=new THREE.Matrix4(),_scB2=new THREE.Box3();
+solidCenter=function(s){const k=JSON.stringify([s.pos,s.rot,s.sc,world.children.length,'o']),c=SCEN.get(s.id);if(c&&c.k===k)return c.v.clone();
+  const r=s.rot||0;_scR.makeRotationY(-r);_scb.makeEmpty();
+  for(const o of world.children){if(o.userData.solid!==s.id)continue;o.updateMatrixWorld(true);o.traverse(m=>{const g=m.geometry;if(!g||!g.attributes||!g.attributes.position)return;if(!g.boundingBox)g.computeBoundingBox();_scM.multiplyMatrices(_scR,m.matrixWorld);_scB2.copy(g.boundingBox).applyMatrix4(_scM);_scb.union(_scB2);});}
+  let v;if(_scb.isEmpty())v=new THREE.Vector3(...s.pos);else{v=_scb.getCenter(new THREE.Vector3());v.applyAxisAngle(new THREE.Vector3(0,1,0),r);}
+  SCEN.set(s.id,{k,v});return v.clone();};
+// a building turns about the middle of its floor area, which also stays put
+bldgCenter=function(){const P=S.pts;if(!P||P.length<3)return bboxC(P);let A=0,cx=0,cz=0;for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length],f=a[0]*b[1]-b[0]*a[1];A+=f;cx+=(a[0]+b[0])*f;cz+=(a[1]+b[1])*f;}
+  return Math.abs(A)<1e-9?bboxC(P):[cx/(3*A),cz/(3*A)];};
+// several objects: the shared middle is fixed when the drag starts, and stays there after a turn
+// until the selection or the objects change some other way
+let GPIV=null,GKEEP=null;
+function gSelKey(){return JSON.stringify(selIds().map(id=>{const o=id==='bldg'?null:objById(id);return o?[id,o.pos,o.rot,o.sc]:[id,S.pts,S.height];}));}
+function gKept(){return GKEEP&&GKEEP.k===gSelKey()?GKEEP.o.clone():null;}
+withPivot=function(fn){if(selIds().length<2)return fn();PIV=GPIV?GPIV.clone():(gKept()||gumCenter());try{return fn();}finally{PIV=null;}};
+{const _rs=rotateSel;rotateSel=function(d){const many=selIds().length>1,c=many?(GPIV?GPIV.clone():(gKept()||gumCenter())):null;const r=_rs.apply(this,arguments);if(many&&c&&!gdrag)GKEEP={k:gSelKey(),o:c};return r;};}
+{const _gt=gumTarget;gumTarget=function(){const t=_gt.apply(this,arguments);if(t&&t.group){if(gdrag&&GPIV)t.o=GPIV.clone();else{const k=gKept();if(k)t.o=k;}}return t;};}
+{const _gs=gumStart;gumStart=function(p,e){const ok=_gs.apply(this,arguments);GPIV=ok&&gdrag&&gdrag.t&&gdrag.t.group?gdrag.t.o.clone():null;return ok;};}
+{const _ge=gumEnd;gumEnd=function(){const g=gdrag,c=GPIV;try{return _ge.apply(this,arguments);}finally{GPIV=null;if(g&&c&&g.kind==='rot'&&g.moved)GKEEP={k:gSelKey(),o:c};}};}
+window.addEventListener('keydown',e=>{if(e.key==='Escape')GPIV=null;},true);
+// click a handle without dragging: a small box opens right there for the distance, angle or factor
+const gumIn=document.createElement('div');gumIn.className='gumin';gumIn.hidden=true;gumIn.innerHTML='<span id="gumInL"></span><input id="gumInV" spellcheck="false" autocomplete="off"><small>Enter</small>';vp.appendChild(gumIn);
+function gumInClose(){gumIn.hidden=true;}
+{const _ga=gumAsk;gumAsk=function(g){_ga.apply(this,arguments);if(!pending||!g||!g.ev){gumInClose();return;}
+  const r=vp.getBoundingClientRect(),x=Math.min(r.width-250,Math.max(6,g.ev.clientX-r.left+14)),y=Math.min(r.height-46,Math.max(6,g.ev.clientY-r.top+14));
+  $('#gumInL').textContent=String(pending.label).replace(/\s*\((m|mm|cm|in|ft|ft-in)\)\s*$/,'')+(isLenLabel(pending.label)?` (${uAbbr()})`:'');
+  const inp=$('#gumInV');inp.value=pending.def!==undefined?String(pending.def):'';gumIn.style.left=x+'px';gumIn.style.top=y+'px';gumIn.hidden=false;setTimeout(()=>{inp.focus();inp.select();},0);};}
+$('#gumInV').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();const v=e.target.value;gumInClose();if(pending)run(v);}else if(e.key==='Escape'){e.preventDefault();gumInClose();if(pending){pending=null;renderOpts();msg('Cancelled.');}}});
+$('#gumInV').addEventListener('blur',()=>setTimeout(()=>{if(document.activeElement!==$('#gumInV'))gumInClose();},150));
 </script>
 
 </html>
