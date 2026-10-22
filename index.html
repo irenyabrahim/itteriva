@@ -13012,6 +13012,89 @@ frLvRender=function(){const c=$('#frCard');if(!c||c.hidden)return;const h5=[...c
 // start-up: older projects get level ids and plan links once
 try{lvMigrate();}catch(e){console.error(e);}
 
+/* st19: the Drawings right panel follows the Model panel's structure: one column with a title bar,
+   padded cards with small-caps titles, and the icon strip on the far right that shows or hides each card. */
+{const st=document.createElement('style');st.textContent=`
+@media (min-width:981px){
+body.dws .dwside{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);padding:0 8px 8px;gap:8px}
+.dwthead{display:none}
+body.dws .dwthead{display:flex;order:-1;position:sticky;top:0;z-index:4;margin:0 -8px;align-items:center;gap:8px;padding:7px 10px;min-height:34px;font-size:12.5px;font-weight:600;color:var(--ink);background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.dwthead svg{width:16px;height:16px;fill:none;stroke:var(--accent);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex:none}
+body.dws .dwside>.dwc{border-radius:var(--r);box-shadow:none}
+body.dws .dwside>.dwc.dwoff{display:none!important}
+body.dws #dwPlanSet,body.dws #dwRev{padding:12px}
+body.dws .dwside .dwh{min-height:0;gap:8px}
+body.dws #dwPlanSet>.dwh,body.dws #dwRev>.dwh{padding:0;margin:0 0 6px}
+body.dws .dwside>.dwc>.dwh:first-child{padding-top:0}
+body.dws .dwside>.dwc>.dwh b,body.dws .dwside>.dwc>.dwh:first-child b{font-family:var(--f-display);font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.07em}
+body.dws #dwLm>.dwh{padding:10px 8px 10px 12px}
+body.dws #dwPlanSet .psok,body.dws #dwRev .psok{font-size:12px;line-height:1.45;margin:0 0 8px}
+body.dws .dwside .psf{grid-template-columns:104px minmax(0,1fr);gap:8px;margin:8px 0;font-size:12.5px;align-items:center}
+body.dws .dwside .psf>span:first-child{line-height:1.3}
+body.dws .dwside .psf>span:first-child small{display:block;font-size:10.5px;color:var(--muted);opacity:.85}
+body.dws .dwside .psf input[type=text],body.dws .dwside .psf select,body.dws .dwside .psro{height:28px;box-sizing:border-box;display:flex;align-items:center}
+body.dws .dwside .psro{padding:0 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+body.dws .dwside .psrow2{min-width:0}
+body.dws .dwside .psrow2 input[type=text]{width:70px}
+body.dws .dwside .psrow2 input[type=range]{min-width:0}
+body.dws .dwside .psrow2 .link{flex:none;white-space:nowrap;font-size:12px;padding:0}
+body.dws .dwside .psf>span:has(>#psOvh){display:flex;align-items:center;gap:6px;color:var(--ink)}
+body.dws .dwside #psOvh{width:auto;flex:none;margin:0}
+body.dws .dwside .pswarn{font-size:12px;line-height:1.45;padding:8px 10px;margin:8px 0}
+body.dws .dwside .psbtns{margin:10px 0 0}
+body.dws .dwside .psbtns button{min-height:32px;white-space:normal;line-height:1.25;padding:6px 10px}
+body.dws #dwPlanSet details{margin-top:10px;padding:8px 0 0}
+body.dws #dwPlanSet details[open] summary{margin-bottom:6px}
+body.dws #dwPlanSet summary{font-size:12.5px}
+body.dws #dwRev h6{margin:4px 0 6px!important}
+body.dws #dwRev .rvrow{margin:0 0 8px}
+body.dws #dwRev .rvrow b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.dws #dwRev .rvrow>span{min-width:0}
+body.dws #dwRev .psbtns{margin-top:4px}
+body.dws #dwRev .psbtns .primary{min-height:34px;font-weight:600}
+body.dws #dwPs .dwtabs{padding:0 8px}
+body.dws #dwPb{padding:10px 12px 12px}
+body.dwson .app{position:relative;padding-right:48px}
+body.dwson .dwstrip{display:flex;flex-direction:column;align-items:center;gap:4px;position:absolute;right:0;top:0;bottom:0;width:40px;padding:6px 0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);z-index:6}
+}
+.dwstrip{display:none}
+body:not(.dwson) .dwstrip{display:none!important}
+`;document.head.appendChild(st);}
+const DWSI={plan:'<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
+  props:'<path d="M4 6h16M4 12h16M4 18h10"/>'};
+const dwThead=document.createElement('div');dwThead.className='dwthead';dwThead.id='dwThead';$('#dwSide').prepend(dwThead);
+const dwStrip=document.createElement('nav');dwStrip.className='pstrip dwstrip';dwStrip.id='dwStrip';dwStrip.setAttribute('aria-label','Drawing panels');
+document.querySelector('.app').appendChild(dwStrip);
+const dwSvg=p=>`<svg viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
+function dwCards(){const b=document.body;return[['dwPlanSet','Plan settings',DWSI.plan],['dwRev','Review & place',DWI.put],['dwPs','Selection & sheet',DWI.sheet],['dwMore','Comments & versions',DWI.comment],['dwLm','Linked model',DWI.cube]]
+  .filter(([id])=>{const e=$('#'+id);if(!e)return false;if(id==='dwPlanSet'||id==='dwRev')return e.classList.contains('on');if(id==='dwLm')return!b.classList.contains('dwlmh');return true;});}
+let dwStripSig='';
+function dwStripApply(){const b=document.body,on=b.classList.contains('dws')&&PRF.pstrip!==false&&layWide.matches;
+  const was=b.classList.contains('dwson');b.classList.toggle('dwson',on);if(was!==on)requestAnimationFrame(()=>{try{resize();layFit();sxRedraw();}catch(e){}});
+  const off=Array.isArray(PRF.dwOff)?PRF.dwOff:[];
+  for(const id of['dwPlanSet','dwRev','dwPs','dwMore','dwLm']){const e=$('#'+id);if(e)e.classList.toggle('dwoff',off.includes(id));}
+  const nm=ptName('p'),th=dwSvg(DWSI.props)+`<span>${hx(nm)}</span>`;if(dwThead.innerHTML!==th)dwThead.innerHTML=th;
+  const cs=dwCards(),sig=JSON.stringify([on,cs.map(c=>c[0]),off]);if(sig===dwStripSig)return;dwStripSig=sig;
+  dwStrip.innerHTML=cs.map(([id,n,ic])=>{const a=!off.includes(id);return`<button type="button" data-c="${id}" data-n="${hx(n)}" aria-label="${hx(n)}" aria-pressed="${a}" class="${a?'on':''}">${dwSvg(ic)}</button>`;}).join('');}
+dwStrip.addEventListener('click',e=>{const bt=e.target.closest('button[data-c]');if(!bt)return;const id=bt.dataset.c;let off=Array.isArray(PRF.dwOff)?[...PRF.dwOff]:[];
+  const show=off.includes(id);off=show?off.filter(x=>x!==id):[...off,id];PRF.dwOff=off;prfSave();dwStripApply();
+  if(show){const c=$('#'+id),sd=$('#dwSide');if(c&&sd)requestAnimationFrame(()=>sd.scrollTo({top:sd.scrollTop+c.getBoundingClientRect().top-sd.getBoundingClientRect().top-44,behavior:'smooth'}));}});
+{const _ds=dwSync;dwSync=function(){const r=_ds.apply(this,arguments);try{dwStripApply();}catch(e){}return r;};}
+{const _da=dwApply;dwApply=function(){const r=_da.apply(this,arguments);try{dwStripApply();}catch(e){}return r;};}
+{const _pr=psRender;psRender=function(){const r=_pr.apply(this,arguments);try{dwStripApply();}catch(e){}return r;};}
+try{layWide.addEventListener('change',()=>{try{dwStripApply();}catch(e){}});}catch(e){}
+try{dwStripApply();}catch(e){}
+
+/* st19: one look for main action buttons (filled accent, rounded, no bevel) everywhere */
+{const st=document.createElement('style');st.textContent=`
+button.primary,#flvCard button.primary,#dwRev button.primary{background:var(--accent,#2753b8);color:var(--accent-ink,#fff);border:1px solid var(--accent,#2753b8);border-style:solid;border-radius:8px;padding:7px 16px;font:inherit;font-weight:600;font-size:13px;line-height:1.25;cursor:pointer;box-shadow:0 1px 2px rgb(0 0 0/.14),inset 0 1px 0 rgb(255 255 255/.12);transition:background .12s,box-shadow .12s,transform .06s}
+button.primary:hover:not(:disabled){background:color-mix(in srgb,var(--accent,#2753b8) 88%,#000);border-color:color-mix(in srgb,var(--accent,#2753b8) 88%,#000)}
+button.primary:active:not(:disabled){transform:translateY(1px);box-shadow:none}
+button.primary:focus-visible{outline:2px solid color-mix(in srgb,var(--accent,#2753b8) 45%,transparent);outline-offset:2px}
+button.primary:disabled,#flvCard button.primary:disabled,#dwRev button.primary:disabled{opacity:.45;cursor:default;box-shadow:none}
+#flvCard .flvfoot button,body.dws #dwRev .psbtns .primary{min-height:36px}
+`;document.head.appendChild(st);}
+
 </script>
 
 </html>
