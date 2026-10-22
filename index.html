@@ -1540,6 +1540,7 @@ body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padd
 /* st11 (Ireny 2026-10-22): a docked command line keeps the same height whether or not a message shows, so the view never resizes (it looked like a zoom on every select) */
 .cmd.dock output,.cmd.dock output:empty{display:block;flex:1 1 100%;height:2.9em;max-height:2.9em;min-height:2.9em;line-height:1.45;overflow:auto;max-width:none;white-space:normal;text-overflow:clip;padding-left:0;border-left:0}
 
+.frcard .frrow em.frdone{color:var(--accent)}
 /* st12: the floor of the picked clipping plane */
 .frcard .frlv{padding:2px 4px;margin:0 -4px;border-radius:5px;cursor:pointer}
 .frcard .frlv:hover{background:var(--hover,rgba(127,127,127,.08))}
@@ -12417,6 +12418,55 @@ function frLvHi(){const L=frLvs();let hit=null;document.querySelectorAll('#frCar
 {const _cs=clipSelect;clipSelect=function(){const r=_cs.apply(this,arguments);try{frLvHi();}catch(e){}return r;};}
 document.addEventListener('click',e=>{const row=e.target.closest&&e.target.closest('#frCard .frlv');if(!row||e.target.closest('input,button'))return;const id=row.dataset.vid;
   if(!id){msg('This level has no plan yet. Tick it and press Make plans at these levels.');return;}if(S.clipShow!=='on')clipShowSet('on');clipSelect(CLSEL===id?null:id);});
+
+/* st13 (Ireny 2026-10-22): assigning walls, floors and roofs always registers. A piece that can be rebuilt as a real wall, slab
+   or roof still is; a curved, joined or irregular one (most imported polysurfaces) is assigned in place: it keeps its shape and
+   layer, carries s.part, and its cut draws as solid poché in plans and sections. Ready for drawings checks the model again
+   after Turn these / Cap them instead of falling back to "Check the model". */
+const PARTW={wall:['wall','walls'],floor:['floor','floors'],roof:['roof','roofs']};
+partsCmd=function(force,kinds){const N=PARTN[S.keymap]||PARTN.rhino;PARTF=force;if(!needPick('tobuilding','imported or modelled objects to turn into walls, floors and roofs'))return;
+  const O=selObjs().filter(o=>o.kind!=='curve'&&!o.roof&&!o.img&&!o.txt);if(!O.length){msg(`${N}: select solids, polysurfaces or imported meshes. Curves become walls with ${(WALLN[S.keymap]||{}).cmd||'Walls from curves'}.`);return;}
+  if(O.length>400){msg(`${N}: ${O.length} objects is a lot at once; select up to 400.`);return;}
+  PARTF=null;snap();const made=[],said=[],bad=[],tag={wall:0,floor:0,roof:0},tagIds=[];
+  const tagIt=(o,k)=>{if(!PARTW[k])return false;o.part=k;tag[k]++;tagIds.push(o.id);return true;};
+  for(const o of O){const want=(kinds&&kinds[o.id])||(force&&force!=='auto'?force:null);let r;
+    try{r=partRead(o);}catch(e){if(!(want&&tagIt(o,want)))bad.push(`${o.name}: could not be read`);continue;}
+    if(r.err){if(!(want&&tagIt(o,want)))bad.push(`${o.name} ${r.err}`);continue;}
+    const k=want||partKind(r);if(!k){const bent=r.loop&&r.ob&&Math.abs(area(r.loop))<r.ob.len*r.ob.wid*0.4;bad.push(bent?`${o.name} looks like a bent or L-shaped wall; assign it with ${N} Wall, or Split it into straight pieces`:`${o.name} doesn't read as a wall, floor or roof (a mass? use Make building)`);continue;}
+    let res;try{res=k==='wall'?partWall(o,r):k==='floor'?partFloor(o,r):partRoof(o,r);}catch(e){res={err:'could not be rebuilt'};}
+    if(res.err){if(!tagIt(o,k))bad.push(`${o.name} ${res.err}`);continue;}
+    for(const x of[].concat(res.obj)){S.solids.push(x);made.push(x.id);}o.hidden=true;delete o.part;said.push(res.say);}
+  const nt=tagIds.length;if(!made.length&&!nt){hist.pop();msg(`${N}: nothing converted. ${bad.slice(0,3).join('; ')}.`);return;}
+  S.example=false;setSelIds([...made.filter(id=>{const x=objById(id);return x&&!(x.name==='Roof outline');}),...tagIds]);save();refresh();
+  const cnt={};for(const t of said){const k=/roof/.test(t)?'roof':t.replace(/^(\w+).*$/,'$1');cnt[k]=(cnt[k]||0)+1;}
+  const parts=[];if(made.length)parts.push(`${said.length===1?said[0]:Object.entries(cnt).map(([k,n])=>plural(n,k)).join(', ')} rebuilt (the originals are hidden on their layers, not deleted)`);
+  if(nt)parts.push(`${Object.entries(tag).filter(([,n])=>n).map(([k,n])=>`${plural(n,'object')} assigned as ${PARTW[k][1]}`).join(', ')} as they are: curved or joined shapes keep their geometry and layer, and their cuts draw solid in plans and sections`);
+  msg(`${N}: ${parts.join('; ')}. Undo puts everything back.${bad.length?` Skipped: ${bad.slice(0,3).join('; ')}${bad.length>3?'…':''}.`:''}`);};
+// cuts through assigned parts: solid poché, like a wall cut
+var PARTNOW=null;
+{const _mr=mpjRings;mpjRings=function(c,X,S2,px,fill){return _mr.call(this,c,X,S2,px,PARTNOW?mixC(INK,PAPER,0.5):fill);};}
+{const _mp=meshPlan;meshPlan=function(c,X,s){const was=PARTNOW;PARTNOW=s&&s.part||null;try{return _mp.apply(this,arguments);}finally{PARTNOW=was;}};}
+{const _mc=meshCut;meshCut=function(c,X,o){const was=PARTNOW;PARTNOW=o&&o.s&&o.s.part||null;try{return _mc.apply(this,arguments);}finally{PARTNOW=was;}};}
+// the selection card says what an object was assigned as
+{const _ml=typeof matLine==='function'?matLine:null;if(_ml)matLine=function(s){const r=_ml.apply(this,arguments);try{if(s&&s.part&&PARTW[s.part]&&typeof r==='string')return r+` · assigned as ${PARTW[s.part][0]}`;}catch(e){}return r;};}
+// Ready for drawings: layer rows say when they are done; Turn these and Cap them check the model again afterwards
+function frAfter(){setTimeout(()=>{try{frScan();}catch(e){console.error(e);}frRender();},60);}
+{const _fr=frRender;frRender=function(){const r=_fr.apply(this,arguments);try{
+    const c=$('#frCard');if(!c||c.hidden)return r;const h5=[...c.querySelectorAll('.frsec h5')].find(h=>/^Layer names$/i.test(h.textContent.trim()));
+    if(h5){const rows=[...h5.parentElement.querySelectorAll('.frrow')];let left=0;rows.forEach((row,i)=>{const l=FR.lays[i];if(!l)return;const k={Walls:'wall',Floors:'floor',Roofs:'roof'}[l.as];
+        const vis=S.solids.filter(o=>objLayer(o)===l.id&&!o.hidden&&o.kind!=='curve');const done=!!k&&vis.every(o=>o.part===k);const em=row.querySelector('em');
+        if(em&&done){em.textContent=`assigned as ${l.as.toLowerCase()} ✓`;em.classList.add('frdone');}else if(k)left++;});
+      const fp=$('#frParts');if(fp){if(!left){fp.textContent='Assigned';fp.disabled=true;}
+        fp.onclick=()=>{const as={Walls:'wall',Floors:'floor',Roofs:'roof'},ids=[],kinds={};for(const l of FR.lays){const k=as[l.as];if(!k)continue;for(const o of S.solids)if(objLayer(o)===l.id&&!o.hidden&&o.kind!=='curve'){ids.push(o.id);kinds[o.id]=k;}}
+          if(!ids.length){msg('Only walls, floors and roofs can be assigned so far.');return;}setSelIds(ids);partsCmd('auto',kinds);frAfter();};}}
+    const cp=$('#frCap');if(cp)cp.onclick=()=>{setSelIds(FR.open.filter(id=>objById(id)));exec('cap');frAfter();};}catch(e){console.error(e);}return r;};}
+// the long axis of a plan outline: when the smallest box came out wider than long, its axes were swapped wrongly, so a thin
+// wall that ran north-south measured as square and was never taken for a wall
+obb=function(P){const H=hull(P);if(H.length<3)return null;let best=null;for(let i=0;i<H.length;i++){const a=H[i],b=H[(i+1)%H.length],l=Math.hypot(b[0]-a[0],b[1]-a[1]);if(l<1e-6)continue;const u=[(b[0]-a[0])/l,(b[1]-a[1])/l],n=[-u[1],u[0]];
+    let s0=1e18,s1=-1e18,t0=1e18,t1=-1e18;for(const p of H){const s=p[0]*u[0]+p[1]*u[1],t=p[0]*n[0]+p[1]*n[1];s0=Math.min(s0,s);s1=Math.max(s1,s);t0=Math.min(t0,t);t1=Math.max(t1,t);}
+    const A=(s1-s0)*(t1-t0);if(!best||A<best.A-1e-9)best={A,u,n,s0,s1,t0,t1};}
+  if(!best)return null;let{u,n,s0,s1,t0,t1}=best;if(t1-t0>s1-s0){const u0=u;u=n;n=[-u0[0],-u0[1]];[s0,s1,t0,t1]=[t0,t1,-s1,-s0];}
+  const tm=(t0+t1)/2,a=[u[0]*s0+n[0]*tm,u[1]*s0+n[1]*tm],b=[u[0]*s1+n[0]*tm,u[1]*s1+n[1]*tm];return{len:s1-s0,wid:t1-t0,a,b};};
 </script>
 
 </html>
