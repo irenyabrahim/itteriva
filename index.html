@@ -1477,6 +1477,31 @@ body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padd
 .wfrm .vwovs .vwlrow{color:var(--ink)}
 .wfrm label.vwovh{grid-column:1/-1;align-items:center;gap:6px}
 .impclip{display:flex;gap:6px;align-items:center;font-weight:500}
+/* v105b st5 panel icon strip (student note 9) */
+.pstrip{display:none}
+@media (min-width:981px){
+  body.pson:not(.dws):not(.nu) .app{position:relative;padding-right:48px}
+  body.pson:not(.dws):not(.nu) .pstrip{display:flex;flex-direction:column;align-items:center;gap:4px;position:absolute;right:0;top:0;bottom:0;width:40px;padding:6px 0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);z-index:6}
+  .pstrip button{position:relative;width:32px;height:32px;display:grid;place-items:center;border:0;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer;padding:0}
+  .pstrip button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .pstrip button:hover{background:var(--panel-2);color:var(--ink)}
+  .pstrip button.on{background:color-mix(in srgb,#2753b8 14%,transparent);color:#2753b8}
+  .pstrip button.on::before{content:"";position:absolute;right:-4px;top:6px;bottom:6px;width:3px;border-radius:2px;background:#2753b8}
+  :root[data-theme=dark] .pstrip button.on{color:#8fb0ff;background:color-mix(in srgb,#2753b8 30%,transparent)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .pstrip button.on{color:#8fb0ff;background:color-mix(in srgb,#2753b8 30%,transparent)}}
+  .pstrip button:focus-visible{outline:2px solid #2753b8;outline-offset:1px}
+  .pstrip button::after{content:attr(data-n);position:absolute;right:calc(100% + 10px);top:50%;transform:translateY(-50%);white-space:nowrap;background:var(--ink);color:var(--panel);font-size:12px;font-weight:500;padding:4px 8px;border-radius:6px;opacity:0;pointer-events:none;transition:opacity .1s;z-index:30}
+  .pstrip button:hover::after,.pstrip button:focus-visible::after{opacity:1}
+  .pstrip .pssep{width:22px;height:1px;background:var(--line);margin:4px 0;margin-top:auto}
+  body.pson[data-lay=revit]:not([data-style=guided]) .app{grid-template-columns:minmax(0,1fr) var(--sw,340px);grid-template-areas:"rail rail" "view side"}
+  body.pson .side>.tier:not(.ston){display:none!important}
+  body.pson .side>.tier.tcol{flex:var(--g,1) 1 0}body.pson .side>.tier.tcol .tbody{display:flex}
+  body.pson .side>.tier.tfix{flex:var(--g,1) 1 0!important;height:auto!important}
+  body.pson .side .tsplit,body.pson .side .tfill,body.pson #olGrip{display:none!important}
+  body.pson .side>.tier .thead .tc{display:none}
+  body.pson.pnone:not(.nu){--sw:0px}
+  body.pson.pnone:not(.nu) .side,body.pson.pnone .swgrip{display:none!important}
+}
 </style>
 
 <header class="top">
@@ -12053,6 +12078,47 @@ function clipImport(ISs,opt){const geo=ISs.filter(I=>I.fmt!=='S2B'&&I.fmt!=='IMA
 
 // a project made before boards existed (or the sample) has none yet: the drawings list must still open
 {const _nr=dwNavRender;dwNavRender=function(){if(!Array.isArray(S.boards))S.boards=[];return _nr.apply(this,arguments);};}
+/* ---------- Student tester note 9 (2026-10-22): the panel column as an icon strip on the far right.
+   One icon per panel (Properties, Layers, Drawings, named the way the user's program names them). Click opens just that
+   panel to the left of the strip; click it again to close it and give the views the room. Shift+click stacks a second
+   panel under the open one. Stacked panels (the v62 tiers) stay one click away; phones keep stacking. ---------- */
+const pStrip=document.createElement('nav');pStrip.className='pstrip';pStrip.id='pStrip';pStrip.setAttribute('aria-label','Panels');
+document.querySelector('.app').appendChild(pStrip);
+function stripOn(){const b=document.body;return layWide.matches&&PRF.pstrip!==false&&!b.classList.contains('dws')&&!b.classList.contains('nu');}
+function stripHome(){return['p','l','s'].filter(g=>{const d=dockOf(g);return d!=='h'&&d===sideZone();});}
+function stripAct(){const h=stripHome();return(Array.isArray(PRF.pact)?PRF.pact:['p']).filter(g=>h.includes(g));}
+{const _sz=sideZone;sideZone=function(){return layWide.matches&&PRF.pstrip!==false&&!document.body.classList.contains('dws')&&!document.body.classList.contains('nu')?'r':_sz();};}
+let stripSig='',stripWas=null;
+function stripApply(){const on=stripOn(),b=document.body;b.classList.toggle('pson',on);
+  if(stripWas!==null&&stripWas!==on){stripWas=on;requestAnimationFrame(()=>{try{dockApply();}catch(e){}});}stripWas=on;
+  const act=on?stripAct():[];for(const g of['p','l','s']){const t=tierEl(g);if(t)t.classList.toggle('ston',act.includes(g));}
+  b.classList.toggle('pnone',on&&!act.length);
+  const home=stripHome(),sig=JSON.stringify([on,home,act,home.map(ptName)]);if(sig===stripSig)return;stripSig=sig;
+  pStrip.innerHTML=home.map(g=>{const t=tierEl(g),ic=t&&t.querySelector('.thead .ti'),n=ptName(g),a=act.includes(g);
+    return`<button type="button" data-g="${g}" data-n="${hx(n)}" aria-label="${hx(n)}" aria-pressed="${a}" class="${a?'on':''}">${ic?ic.outerHTML:''}</button>`;}).join('')+
+    `<span class="pssep"></span><button type="button" data-g="stack" data-n="Stack all panels" aria-label="Stack all panels"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="4" rx="1"/><rect x="5" y="10" width="14" height="4" rx="1"/><rect x="5" y="16" width="14" height="4" rx="1"/></svg></button>`;
+  const pm=$('#pMode');if(pm){pm.textContent=on?'Stack all':'Icon strip';pm.title=on?'Show every panel stacked in one column':'One panel at a time, picked from an icon strip on the far right';}}
+function stripSet(list){const h=stripHome();PRF.pact=[...new Set(list)].filter(g=>h.includes(g)).sort((a,b)=>'pls'.indexOf(a)-'pls'.indexOf(b));prfSave();stripApply();try{tiersApply();}catch(e){}refresh();requestAnimationFrame(()=>{try{resize();}catch(e){}});}
+function stripMode(on){PRF.pstrip=!!on;prfSave();stripSig='';stripApply();try{dockApply();}catch(e){}refresh();
+  msg(on?'Panels: icon strip. Click an icon on the far right to open that panel; Shift+click adds a second one under it.':'Panels: stacked in one column, as before. PANELS STRIP brings the icon strip back.');}
+pStrip.addEventListener('click',e=>{const bt=e.target.closest('button');if(!bt)return;const g=bt.dataset.g;if(g==='stack'){stripMode(false);return;}
+  const act=stripAct(),open=act.includes(g);
+  if(e.shiftKey||e.metaKey||e.ctrlKey)stripSet(open?act.filter(x=>x!==g):[...act,g]);else stripSet(open&&act.length===1?[]:[g]);});
+// opening a panel from anywhere (a tier title, ASSEMBLY, LEVELS, the Window and Door tools) opens its icon
+{const _tt=tierToggle;tierToggle=function(g,open){if(!stripOn()||!stripHome().includes(g))return _tt.apply(this,arguments);
+  const act=stripAct(),isOpen=act.includes(g),want=open===undefined?!isOpen:!!open;if(want===isOpen)return;stripSet(want?[g]:act.filter(x=>x!==g));};}
+{const _ta=tiersApply;tiersApply=function(){const r=_ta.apply(this,arguments);try{stripApply();}catch(e){}return r;};}
+{const _pt=panTabFor;panTabFor=function(id){if(stripOn()){const g=PTG[id]||'p';if(stripHome().includes(g)&&!stripAct().includes(g))stripSet([g]);return;}return _pt.apply(this,arguments);};}
+// placing windows or doors shows their types in Properties
+let stripTool=null;{const _pc=pCtx;pCtx=function(){const r=_pc.apply(this,arguments);try{if(tool!==stripTool){stripTool=tool;if((tool==='window'||tool==='door')&&stripOn()&&stripHome().includes('p')&&!stripAct().includes('p'))stripSet(['p']);}}catch(e){}return r;};}
+{const _sw=swTarget;swTarget=function(){if(document.body.classList.contains('pnone'))return null;return _sw.apply(this,arguments);};}
+layWide.addEventListener('change',()=>{stripSig='';stripApply();});
+new MutationObserver(()=>{const was=document.body.classList.contains('pson');if(was!==stripOn()){stripSig='';stripApply();}}).observe(document.body,{attributes:true,attributeFilter:['class']});
+{const pb=document.querySelector('.pbar .pbtns');if(pb){const b=document.createElement('button');b.type='button';b.className='ghost';b.id='pMode';pb.prepend(b);b.addEventListener('click',()=>stripMode(!stripOn()));}}
+{const _r=run;run=function(raw){const t=String(raw||'').trim().toLowerCase(),m=/^(?:panels\s+(strip|icons|stack|stacked)|(?:panelstrip|iconstrip)(?:\s+(on|off))?)$/.exec(t);
+  if(m){cmdIn.value='';const a=m[1]||m[2]||'';stripMode(a?['strip','icons','on'].includes(a):!stripOn());return;}return _r.apply(this,arguments);};}
+try{stripApply();dockApply();}catch(e){console.error(e);}
+
 </script>
 
 </html>
