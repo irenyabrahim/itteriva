@@ -12513,12 +12513,14 @@ function lvBack(h){if(!h||h.flv===undefined)return;const v=JSON.parse(h.flv);if(
 {const _r=redo;redo=function(){const h=redoStack[redoStack.length-1];const r=_r.apply(this,arguments);lvBack(h);return r;};}
 
 /* st14: lines sketched in a side view before this fix landed absurdly far away (10^17 ft), which stretched everything framed to the
-   model: clipping plane frames, Zoom Extents, sheets. Any curve with a point more than 100 km out is removed once, on start-up. */
-function farJunk(){const far=p=>Array.isArray(p)&&p.some(n=>typeof n==='number'&&(!isFinite(n)||Math.abs(n)>1e5));
-  const bad=S.solids.filter(o=>o.kind==='curve'&&(far(o.pos)||(o.pts||o.P||[]).some(far)));if(!bad.length)return 0;
-  const ids=new Set(bad.map(o=>o.id));S.solids=S.solids.filter(o=>!ids.has(o.id));if(Array.isArray(S.sel))S.sel=S.sel.filter(id=>!ids.has(id));
-  save();try{CLP.gsig='';CLP.key='';}catch(e){}refresh();try{rdrWake();}catch(e){}
-  msg(`Removed ${plural(bad.length,'line')} drawn in a side view that landed far off the model, which stretched the clipping planes and zoom.`);return bad.length;}
+   model: clipping plane frames, Zoom Extents, sheets. Anything more than 100 km out is left out of the model's extents, and such
+   curves are hidden once on start-up (not deleted: Show brings them back, Delete removes them). */
+const FARP=p=>Array.isArray(p)&&p.some(n=>typeof n==='number'&&(!isFinite(n)||Math.abs(n)>1e5));
+const isFar=o=>!!o&&(FARP(o.pos)||o.kind==='curve'&&(o.pts||[]).some(FARP));
+{const _b=bounds;bounds=function(){const all=S.solids;if(!all.some(isFar))return _b.apply(this,arguments);S.solids=all.filter(o=>!isFar(o));try{return _b.apply(this,arguments);}finally{S.solids=all;}};}
+function farJunk(){const bad=S.solids.filter(o=>isFar(o)&&!o.hidden&&!o.farHid);if(!bad.length)return 0;for(const o of bad){o.hidden=true;o.farHid=1;}
+  if(Array.isArray(S.sel))S.sel=S.sel.filter(id=>!bad.some(o=>o.id===id));save();try{CLP.gsig='';CLP.key='';}catch(e){}refresh();try{rdrWake();}catch(e){}
+  msg(`Hid ${plural(bad.length,'line')} drawn in a side view that landed far off the model, which stretched the clipping planes and zoom. Nothing was deleted: Show brings ${bad.length>1?'them':'it'} back.`);return bad.length;}
 try{farJunk();}catch(e){console.error(e);}
 
 </script>
