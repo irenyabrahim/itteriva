@@ -12663,8 +12663,8 @@ function frLevels(R){const all=[];let y0=1e9,y1=-1e9,x0=1e9,x1=-1e9,z0=1e9,z1=-1
   for(const f of all){let c=cl[cl.length-1];if(!c||f.y-c.y1>tol){c={ys:0,w:0,y1:f.y,up:0,dn:0,rf:0,x0:1e9,x1:-1e9,z0:1e9,z1:-1e9,st:new Map(),ids:new Set()};cl.push(c);}
     c.y1=f.y;c.ys+=f.y*f.ar;c.w+=f.ar;if(f.furn||f.st)continue;if(f.up){c.up+=f.ar;c.x0=Math.min(c.x0,f.cx);c.x1=Math.max(c.x1,f.cx);c.z0=Math.min(c.z0,f.cz);c.z1=Math.max(c.z1,f.cz);c.ids.add(f.sid);if(f.rf)c.rf+=f.ar;if(f.stn)c.st.set(f.stn,(c.st.get(f.stn)||0)+f.ar);}if(f.dn)c.dn+=f.ar;}
   for(const c of cl)c.y=c.ys/c.w;
-  const big=Math.max(0,...cl.map(c=>c.up)),AF=Math.max(1,(x1-x0)*(z1-z0)),min=Math.max(big*0.12,AF*0.01,0.5);
-  let cand=cl.filter(c=>c.up>=min);
+  const ups=cl.filter(c=>c.up>0).map(c=>c.up).sort((p,q)=>q-p),big=ups.length>1?ups[1]:(ups[0]||0),min=Math.max(big*0.12,0.5);
+  let cand=cl.filter(c=>c.up>=min);if(ups.length>1&&ups[0]>4*ups[1])cand=cand.filter(c=>c.up<ups[0]);
   // one floor's finish and slab tops: close and over the same area
   const ov=(a,b)=>{const w=Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0),d=Math.min(a.z1,b.z1)-Math.max(a.z0,b.z0);if(w<=0||d<=0)return 0;const A=w*d,ar=x=>Math.max(1e-6,(x.x1-x.x0)*(x.z1-x.z0));return A/Math.min(ar(a),ar(b));};
   const keep=[];for(const c of cand){const p=keep[keep.length-1];if(p&&c.y-p.y<0.12&&ov(p,c)>0.5){if(c.up>=p.up*0.3)keep[keep.length-1]=Object.assign(c,{up:c.up+p.up});continue;}keep.push(c);}cand=keep;
@@ -12674,7 +12674,7 @@ function frLevels(R){const all=[];let y0=1e9,y1=-1e9,x0=1e9,x1=-1e9,z0=1e9,z1=-1
   for(const o of out){delete o.rf;o.st='cand';}
   return{lv:out,cl:cl.filter(c=>c.up+c.dn>=min*0.25).map(c=>rnd4(c.y)),tol};}
 frScan=function(){const R=[],open=[];let tri=0;
-  for(const s of S.solids){if(s.hidden||s.img||s.kind==='curve'||!layerOn(objLayer(s)))continue;let T=[];try{T=objTris(s);}catch(e){continue;}if(!T.length)continue;tri+=T.length;if(tri>400000)break;
+  for(const s of [...S.solids].sort((p,q)=>(p.ntri||0)-(q.ntri||0))){if(s.hidden||s.img||s.kind==='curve'||!layerOn(objLayer(s)))continue;let T=[];try{T=objTris(s);}catch(e){continue;}if(!T.length)continue;tri+=T.length;if(tri>400000)break;
     let op=false;if(T.length<60000){const E=new Map(),k=p=>p.map(v=>Math.round(v*1000)).join(',');for(const t of T)for(let i=0;i<3;i++){const a=k(t[i]),b=k(t[(i+1)%3]),e=a<b?a+'|'+b:b+'|'+a;E.set(e,(E.get(e)||0)+1);}
       if([...E.values()].some(c=>c===1)){open.push(s.id);op=true;}}R.push({s,T,open:op});}
   const D=frLevels(R);
@@ -13094,6 +13094,33 @@ button.primary:focus-visible{outline:2px solid color-mix(in srgb,var(--accent,#2
 button.primary:disabled,#flvCard button.primary:disabled,#dwRev button.primary:disabled{opacity:.45;cursor:default;box-shadow:none}
 #flvCard .flvfoot button,body.dws #dwRev .psbtns .primary{min-height:36px}
 `;document.head.appendChild(st);}
+
+/* st20 (tester feedback 2026-10-22): an old plan that isn't linked to a level and cuts below or above the whole model now follows a
+   level instead of showing an empty sheet; the empty-sheet note says when a plan isn't linked; the viewport title gets a ▾ that
+   opens the views / display mode menu (and clicking the active title opens it too). */
+let lvAdoptSig='';
+function lvAdopt(force){if(!lvFree())return[];const L=flvLevels().filter(l=>!l.roof);if(!L.length)return[];
+  const un=(S.views||[]).filter(v=>v.kind==='plan'&&!v.lvId&&!v.site&&!/site/i.test(v.name||''));if(!un.length)return[];
+  const sig=JSON.stringify([L.map(l=>[l.id,l.y]),un.map(v=>[v.id,v.cut,v.low]),S.solids.length]);if(!force&&sig===lvAdoptSig)return[];lvAdoptSig=sig;
+  const done=[];for(const v of un){let d;try{d=psDiag(v);}catch(e){continue;}if(d.n||!/^(cutLow|cutHigh|range)$/.test(d.cause||''))continue;
+    const l=L.find(x=>!lvPlans(x.id).length)||L[0];v.lvId=l.id;v.cutOff=CUTDEF();delete v.lowOff;delete v.topOff;delete v.lvReview;v.lvAdopt=1;PS.thumbs&&PS.thumbs.delete(v.id);done.push([v,l]);}
+  if(done.length){lvSync();try{save();}catch(e){}
+    msg(done.map(([v,l])=>`"${v.name}" was cutting outside the model, so it now follows ${lvName(l)} (cut ${fmtL(+v.cutOff)} above it).`).join(' '));}
+  return done;}
+{const _g=flvGoDrawings;flvGoDrawings=function(){try{if(flvLevels().some(l=>!l.roof))lvAdopt(true);}catch(e){console.error(e);}return _g.apply(this,arguments);};}
+{const _m=lvMigrate;lvMigrate=function(){const r=_m.apply(this,arguments);try{if(lvAdopt().length){try{psRender();}catch(e){}try{if(LAY.on)sxRedraw();}catch(e){}}}catch(e){console.error(e);}return r;};}
+{const _e=psEmpty;psEmpty=function(v){const r=_e.apply(this,arguments);try{const e=$('#dwEmpty');if(v&&e&&e.classList.contains('on')&&!psLv(v)){const p=e.querySelector('p');
+  if(p&&!e.querySelector('.psun'))p.insertAdjacentHTML('afterend',`<p class="psun" style="margin:0 0 8px">This plan isn't linked to a floor level, so it cuts at a fixed height (${hx(elvL(+v.cut||0))}). ${flvLevels().length?'Link it to a level in Plan settings.':'Set floor levels in Model first.'}</p>`);}}catch(x){}return r;};}
+// the viewport title shows a ▾; clicking it, or clicking the active title, opens the views and display mode menu
+{const st=document.createElement('style');st.textContent=`.vplabel .vpcar{display:inline-block;margin-left:5px;padding:0 2px;opacity:.85;font-size:10px;line-height:1}.vplabel:hover .vpcar{opacity:1}`;document.head.appendChild(st);}
+{const _lv=labelVPs;labelVPs=function(){const r=_lv.apply(this,arguments);try{const on=VPS.filter(x=>x.on);labelBox.querySelectorAll('.vplabel').forEach((b,i)=>{const v=on[i];if(!v||b.querySelector('.vpcar'))return;
+    const c=document.createElement('span');c.className='vpcar';c.textContent='▾';c.setAttribute('aria-hidden','true');b.appendChild(c);b.setAttribute('aria-haspopup','menu');
+    b.title=`Click ▾ (or right-click) for views and ${String(UI[S.keymap].mode||'display mode').toLowerCase()}. `+(S.layout==='4'?'Double-click to maximize.':'Double-click to show four views.');
+    let t=0;b.addEventListener('click',e=>{const car=e.target.closest('.vpcar'),wasOn=b.classList.contains('on')||v===AV;clearTimeout(t);
+      if(car){e.stopPropagation();activate(v);const nb=[...labelBox.querySelectorAll('.vplabel')][on.indexOf(v)]||b;axoOpen(nb,v,true);return;}
+      if(wasOn&&e.detail===1)t=setTimeout(()=>{const nb=[...labelBox.querySelectorAll('.vplabel')][on.indexOf(v)];if(nb)axoOpen(nb,v,true);},260);},true);
+    b.addEventListener('dblclick',()=>{clearTimeout(t);try{axoClose();}catch(x){}},true);});}catch(e){}return r;};}
+try{labelVPs();}catch(e){}
 
 </script>
 
