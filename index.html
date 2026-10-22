@@ -12564,6 +12564,35 @@ function sideDone(c,what){S.solids.push(c);S.example=false;setSelIds([c.id]);ref
   const name={poly:'Polyline',rect:'Rectangle',circle:'Circle',polygon:'Polygon'}[sk.shape]||'Polyline';snap();sk=null;pending=null;drawSketch();tip.hidden=true;setTool('select');
   sideDone(sideObj(name,P,true,sd),`Closed ${name.toLowerCase()}, ${fmtA(Math.abs(area(P)))} inside,`);};}
 
+/* st16 (Ireny 2026-10-22): display mode lives in each viewport's right-click menu instead of the toolbar, and the axonometric
+   views open as a flyout beside that menu (hover or click "Axonometric ▸"), so the menu stays short. */
+{const st=document.createElement('style');st.textContent=`label.fld:has(#dmode){display:none!important}
+.axom .axsub{justify-content:space-between}.axom .axsub::after{content:'▸';color:var(--muted);margin-left:12px}.axom .axsub.open{background:color-mix(in srgb,#2753b8 10%,transparent)}
+.axom .axfly{position:fixed;z-index:61;min-width:250px;max-height:80vh;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:4px}
+.axom .dmk{width:14px;flex:none;text-align:center;color:#2753b8}`;document.head.appendChild(st);}
+{const _ao=axoOpen;axoOpen=function(anchor,v=AV,std){if(!std)return _ao.apply(this,arguments);axoClose();
+  axoM=document.createElement('div');axoM.className='axom';axoM.setAttribute('role','menu');const vm=v.mode||'shaded';
+  let h='<h6>Standard views</h6>'+['top','front','right','back','left','iso'].map(k=>`<button type="button" role="menuitem" data-sv="${k}" class="${v.view===k?'on':''}">${hx(vname(k))}</button>`).join('');
+  const on=!!AXO[v.view];h+=`<button type="button" role="menuitem" aria-haspopup="menu" class="axsub${on?' on':''}" data-sub="axo"><span>${hx(on?vname(v.view):AXL[S.keymap])}</span></button>`;
+  h+=`<h6>${hx(UI[S.keymap].mode)}</h6>`+Object.keys(MODES).map(m=>`<button type="button" role="menuitemradio" aria-checked="${vm===m}" data-dm="${m}" class="${vm===m?'on':''}"><span class="dmk">${vm===m?'●':''}</span>${hx(modeName(m))}</button>`).join('');
+  axoM.innerHTML=h;document.body.appendChild(axoM);const r=anchor.getBoundingClientRect(),W=axoM.offsetWidth,H=axoM.offsetHeight;
+  axoM.style.left=Math.min(Math.max(8,r.left),innerWidth-W-8)+'px';axoM.style.top=(r.bottom+4+H>innerHeight-8?Math.max(8,r.top-H-4):r.bottom+4)+'px';
+  const sub=axoM.querySelector('[data-sub]');let fly=null;
+  const flyClose=()=>{if(fly){fly.remove();fly=null;sub.classList.remove('open');sub.setAttribute('aria-expanded','false');}};
+  const flyOpen=()=>{if(fly)return;fly=document.createElement('div');fly.className='axfly';fly.setAttribute('role','menu');let g='',f='';
+    for(const k in AXO){const A=AXO[k];if(A.g!==g){g=A.g;f+=`<h6>${g}</h6>`;}f+=`<button type="button" role="menuitem" data-ax="${k}" class="${v.view===k?'on':''}">${axoIc(k)}<span>${hx(A.n[S.keymap])}<small>${hx(A.t)}</small></span></button>`;}
+    fly.innerHTML=f;axoM.appendChild(fly);sub.classList.add('open');sub.setAttribute('aria-expanded','true');const s=sub.getBoundingClientRect(),m=axoM.getBoundingClientRect(),FW=fly.offsetWidth,FH=fly.offsetHeight;
+    fly.style.left=(m.right+4+FW<=innerWidth-8?m.right+4:Math.max(8,m.left-FW-4))+'px';fly.style.top=Math.max(8,Math.min(s.top-5,innerHeight-FH-8))+'px';};
+  sub.addEventListener('mouseenter',flyOpen);sub.addEventListener('click',e=>{e.stopPropagation();fly?flyClose():flyOpen();const b=fly&&(fly.querySelector('.on')||fly.querySelector('button'));if(b)b.focus();});
+  sub.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();flyOpen();const b=fly.querySelector('.on')||fly.querySelector('button');if(b)b.focus();}});
+  // a short grace period, so a diagonal move toward the flyout across another row doesn't close it
+  let flyT=0;axoM.addEventListener('mouseover',e=>{const b=e.target.closest('button');clearTimeout(flyT);if(e.target.closest('.axfly')||b===sub)return;if(b)flyT=setTimeout(flyClose,300);});
+  axoM.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'&&fly&&fly.contains(e.target)){e.preventDefault();flyClose();sub.focus();}});
+  axoM.addEventListener('click',e=>{const b=e.target.closest('[data-ax],[data-sv],[data-dm]');if(!b)return;axoClose();activate(v);
+    if(b.dataset.dm){setMode(b.dataset.dm,v);msg(`${UI[S.keymap].mode}: ${modeName(v.mode)} in the ${vpTitle(v)} viewport.`);}
+    else if(b.dataset.ax)axoSet(b.dataset.ax,v);else{setView(b.dataset.sv,v);msg(`View: ${vpTitle(v)}.`);}try{rdrWake();}catch(e){}});
+  const f=axoM.querySelector('[data-sv].on')||axoM.querySelector('button');if(f)f.focus();};}
+
 </script>
 
 </html>
