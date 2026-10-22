@@ -1502,6 +1502,26 @@ body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padd
   body.pson.pnone:not(.nu){--sw:0px}
   body.pson.pnone:not(.nu) .side,body.pson.pnone .swgrip{display:none!important}
 }
+/* v105b st6 app menu under the program name */
+.top .brand[role=button]{cursor:pointer;border-radius:8px;padding:4px 6px;margin:-4px -2px -4px -6px}
+.top .brand[role=button]:hover,.top .brand.on{background:var(--panel-2)}
+.top .brand[role=button]:focus-visible{outline:2px solid #2753b8;outline-offset:1px}
+.top .brand .amchev{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--muted);transition:transform .12s}
+.top .brand.on .amchev{transform:rotate(180deg)}
+.amenu{position:absolute;top:calc(100% + 6px);left:8px;z-index:61;width:260px;max-width:calc(100vw - 24px);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(20,30,40,.18);padding:6px}
+.amenu[hidden]{display:none}
+.amenu .amsec{display:flex;flex-direction:column;gap:1px;padding:4px 0}.amenu .amsec+.amsec{border-top:1px solid var(--line)}
+.amenu h4{margin:2px 8px 4px;font:600 11px var(--f-display,inherit);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.amenu button{display:flex!important;align-items:center;gap:10px;width:100%;justify-content:flex-start;text-align:left;border:0!important;background:transparent;border-radius:7px;padding:7px 9px!important;font-size:13px;color:var(--ink);height:auto;min-height:32px}
+.amenu button[hidden]{display:none!important}
+.amenu button:hover,.amenu button:focus-visible{background:color-mix(in srgb,#2753b8 10%,transparent);outline:none}
+.amenu button svg{display:block!important;width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.amenu button span{display:inline!important}.amenu button kbd{margin-left:auto;font-size:11px;color:var(--muted);background:none;border:0}
+.amenu #wsBtn b{font-weight:600;margin-left:auto;max-width:none!important;overflow:visible;white-space:nowrap}.amenu #wsBtn span{flex:none}
+.speaks #undoBtn span,.speaks #undoBtn kbd,.speaks #redoBtn span,.speaks #redoBtn kbd{display:none}
+.custpop{left:8px;right:auto}
+@media (max-width:600px){.custpop{left:-6px;right:-6px}}
+@media (max-width:1360px){.top .brand b{display:inline}}
 </style>
 
 <header class="top">
@@ -12118,6 +12138,35 @@ new MutationObserver(()=>{const was=document.body.classList.contains('pson');if(
 {const _r=run;run=function(raw){const t=String(raw||'').trim().toLowerCase(),m=/^(?:panels\s+(strip|icons|stack|stacked)|(?:panelstrip|iconstrip)(?:\s+(on|off))?)$/.exec(t);
   if(m){cmdIn.value='';const a=m[1]||m[2]||'';stripMode(a?['strip','icons','on'].includes(a):!stripOn());return;}return _r.apply(this,arguments);};}
 try{stripApply();dockApply();}catch(e){console.error(e);}
+
+/* ---------- Ireny 2026-10-22: the top bar's right-hand group lives in a menu under the program name.
+   Clicking "Sketch to Building" opens it: workspace, Customize, Undo, Redo, Import, Export and the command map.
+   New users (the guided first steps) keep Undo and Redo in the bar, where the first lessons point to them. ---------- */
+{const top=document.querySelector('header.top'),brand=top.querySelector('.brand');
+  brand.setAttribute('role','button');brand.tabIndex=0;brand.setAttribute('aria-haspopup','menu');brand.setAttribute('aria-expanded','false');brand.title='Menu: workspace, Customize, undo, import, export';
+  brand.insertAdjacentHTML('beforeend','<svg class="amchev" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>');
+  const am=document.createElement('div');am.className='amenu';am.id='appMenu';am.setAttribute('role','menu');am.hidden=true;top.appendChild(am);
+  const sec=n=>{const d=document.createElement('div');d.className='amsec';if(n)d.innerHTML=`<h4>${n}</h4>`;am.appendChild(d);return d;};
+  const s1=sec('Workspace'),s2=sec('Edit'),s3=sec('Files and help');
+  const ws=$('#wsBtn'),cb=$('#custBtn'),ub=$('#undoBtn'),rb=$('#redoBtn'),ib=$('#impBtn'),eb=$('#expBtn'),hb=$('#helpBtn');
+  for(const[b,t]of[[ub,'Undo'],[rb,'Redo']])if(b&&!b.querySelector('span'))b.insertAdjacentHTML('beforeend',`<span>${t}</span><kbd>${t==='Undo'?'Ctrl+Z':'Ctrl+Y'}</kbd>`);
+  if(cb&&!cb.querySelector('svg'))cb.insertAdjacentHTML('afterbegin','<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>');
+  [ws,cb].forEach(b=>b&&s1.appendChild(b));[ub,rb].forEach(b=>b&&s2.appendChild(b));[ib,eb,hb].forEach(b=>b&&s3.appendChild(b));
+  top.querySelectorAll('.speaks .hsep').forEach(x=>{if(!x.nextElementSibling||x.nextElementSibling.id==='nuTop'||x.nextElementSibling.tagName==='SPAN')x.hidden=true;});
+  for(const b of am.querySelectorAll('button'))b.setAttribute('role','menuitem');
+  const open=o=>{am.hidden=!o;brand.setAttribute('aria-expanded',String(o));brand.classList.toggle('on',o);if(o){const r=brand.getBoundingClientRect(),t=top.getBoundingClientRect();am.style.left=Math.max(4,r.left-t.left-4)+'px';(am.querySelector('button:not([hidden])')||am).focus();}};
+  brand.addEventListener('click',e=>{e.stopPropagation();open(am.hidden);});
+  brand.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '||e.key==='ArrowDown'){e.preventDefault();open(true);}});
+  // a pick closes the menu (Customize then opens its own card); Undo and Redo leave it open to press again
+  am.addEventListener('click',e=>{const b=e.target.closest('button');if(b&&b!==ub&&b!==rb)open(false);},true);
+  document.addEventListener('pointerdown',e=>{if(!am.hidden&&!am.contains(e.target)&&!brand.contains(e.target))open(false);},true);
+  am.addEventListener('keydown',e=>{const items=[...am.querySelectorAll('button')].filter(x=>!x.hidden&&x.offsetParent);const i=items.indexOf(document.activeElement);
+    if(e.key==='Escape'){e.preventDefault();open(false);brand.focus();}else if(e.key==='ArrowDown'){e.preventDefault();(items[i+1]||items[0]).focus();}else if(e.key==='ArrowUp'){e.preventDefault();(items[i-1]||items[items.length-1]).focus();}});
+  // the guided first steps point at Undo in the bar: there it stays while they run
+  const place=()=>{const nu=document.body.classList.contains('nu');if(!ub)return;if(nu&&ub.parentElement===s2){const anchor=$('#nuTop');if(anchor){anchor.after(ub,rb);}}else if(!nu&&ub.parentElement!==s2){s2.appendChild(ub);s2.appendChild(rb);}};
+  new MutationObserver(place).observe(document.body,{attributes:true,attributeFilter:['class']});place();}
+// the panel bar keeps Arrange only: the icon strip opens and closes panels
+{const a=$('#pColAll'),m=$('#pMode');if(a)a.hidden=true;if(m)m.hidden=true;}
 
 </script>
 
