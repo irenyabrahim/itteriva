@@ -1522,6 +1522,9 @@ body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padd
 .custpop{left:8px;right:auto}
 @media (max-width:600px){.custpop{left:-6px;right:-6px}}
 @media (max-width:1360px){.top .brand b{display:inline}}
+
+/* st7 (Ireny 2026-10-22): no panel bar (Arrange gone), no Panels section in Customize, strip always on */
+.pbar{display:none!important}.cpsec:has(#cpArr){display:none}
 </style>
 
 <header class="top">
@@ -2270,6 +2273,12 @@ const MOUSE={
 const DEFAULT={pts:[[-6,-5],[6,-5],[6,1],[0,1],[0,5],[-6,5]],height:3.2,built:true,preset:0,
   layers:clone(PRESETS[0].layers),floorLayers:clone(FPRESETS[0].layers),fpreset:0,roofLayers:clone(RPRESETS[0].layers),rpreset:0,room:'Studio',solids:[],sel:null,winType:'punched',winSize:{w:1.2,sill:0.9,head:2.1},doorType:'single',doorSize:{w:0.9,head:2.1},doorHand:0,doorSwing:'in',keymap:'revit',style:'render',sun:15,example:true,
   windows:[{e:0,s:3.4,t:'ribbon'},{e:0,s:8.6,t:'punched'},{e:1,s:3,t:'storefront'},{e:2,s:2.6,t:'punched'},{e:4,s:3,t:'tall'},{e:5,s:6.2,t:'punched'},{e:5,s:2.6,t:'punched'},{e:2,s:4.6,t:'single',hand:0,swing:'in'}]};
+/* Safe start (2026-10-22): ?safe in the address, or a start that never finished last time (the tab crashed or froze while
+   loading), opens without the saved model. Nothing is deleted: the project stays under Projects and the last state is kept in s2b-state-safe. */
+var SAFE=(()=>{try{const q=/[?&#]safe\b/i.test(location.search+location.hash),n=+(localStorage.getItem('s2b-boot')||0);
+  localStorage.setItem('s2b-boot',String(n+1));if(!q&&n<1)return null;
+  const st=localStorage.getItem('s2b-state');if(st)try{localStorage.setItem('s2b-state-safe',st);}catch(e){}
+  localStorage.removeItem('s2b-state');localStorage.removeItem('s2b-cur');return q?'link':'auto';}catch(e){return null;}})();
 let S=clone(DEFAULT);
 try{const v=JSON.parse(localStorage.getItem('s2b-state')||'null'); if(v&&v.layers) S=Object.assign(clone(DEFAULT),v); else{S.pts=null;S.built=false;S.example=false;S.windows=[];}}catch(e){}
 const save=()=>{try{localStorage.setItem('s2b-state',JSON.stringify(S));}catch(e){}if(typeof projTouch==='function')projTouch();};
@@ -12115,8 +12124,7 @@ function stripApply(){const on=stripOn(),b=document.body;b.classList.toggle('pso
   b.classList.toggle('pnone',on&&!act.length);
   const home=stripHome(),sig=JSON.stringify([on,home,act,home.map(ptName)]);if(sig===stripSig)return;stripSig=sig;
   pStrip.innerHTML=home.map(g=>{const t=tierEl(g),ic=t&&t.querySelector('.thead .ti'),n=ptName(g),a=act.includes(g);
-    return`<button type="button" data-g="${g}" data-n="${hx(n)}" aria-label="${hx(n)}" aria-pressed="${a}" class="${a?'on':''}">${ic?ic.outerHTML:''}</button>`;}).join('')+
-    `<span class="pssep"></span><button type="button" data-g="stack" data-n="Stack all panels" aria-label="Stack all panels"><svg class="ti" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="4" rx="1"/><rect x="5" y="10" width="14" height="4" rx="1"/><rect x="5" y="16" width="14" height="4" rx="1"/></svg></button>`;
+    return`<button type="button" data-g="${g}" data-n="${hx(n)}" aria-label="${hx(n)}" aria-pressed="${a}" class="${a?'on':''}">${ic?ic.outerHTML:''}</button>`;}).join('');
   const pm=$('#pMode');if(pm){pm.textContent=on?'Stack all':'Icon strip';pm.title=on?'Show every panel stacked in one column':'One panel at a time, picked from an icon strip on the far right';}}
 function stripSet(list){const h=stripHome();PRF.pact=[...new Set(list)].filter(g=>h.includes(g)).sort((a,b)=>'pls'.indexOf(a)-'pls'.indexOf(b));prfSave();stripApply();try{tiersApply();}catch(e){}refresh();requestAnimationFrame(()=>{try{resize();}catch(e){}});}
 function stripMode(on){PRF.pstrip=!!on;prfSave();stripSig='';stripApply();try{dockApply();}catch(e){}refresh();
@@ -12168,6 +12176,54 @@ try{stripApply();dockApply();}catch(e){console.error(e);}
 // the panel bar keeps Arrange only: the icon strip opens and closes panels
 {const a=$('#pColAll'),m=$('#pMode');if(a)a.hidden=true;if(m)m.hidden=true;}
 
+
+/* st7 (Ireny 2026-10-22): the icon strip is the only way panels open on a computer; no stack-all switch, no Arrange */
+PRF.pstrip=true;try{prfSave();}catch(e){}
+stripMode=function(){PRF.pstrip=true;prfSave();stripSig='';stripApply();try{dockApply();}catch(e){}refresh();msg('Panels open from the icons on the far right. Click one to open it; Shift+click adds a second one under it.');};
+try{stripSig='';stripApply();dockApply();}catch(e){console.error(e);}
+
+/* Safe start: the start finished, so the next one loads the saved model again */
+function bootOk(){try{if((S.solids||[]).some(s=>s.kind==='mesh'&&!GEO.has(s.geo)))return setTimeout(bootOk,2000);}catch(e){}
+  requestAnimationFrame(()=>setTimeout(()=>{try{localStorage.setItem('s2b-boot','0');}catch(e){}},1500));}
+setTimeout(bootOk,6000);
+if(SAFE)setTimeout(()=>{try{msg(SAFE==='auto'?'The last start did not finish (the page crashed or froze while loading your model), so this one opened without it. Your project is not deleted: it is under Projects.':'Safe start: opened without your last model. Your project is not deleted: it is under Projects.');}catch(e){}
+  try{if(/[?&#]safe/i.test(location.search+location.hash))history.replaceState(null,'',location.pathname);}catch(e){}},600);
+
+/* Big imported models (2026-10-22, Ireny: the site froze and crashed on start after importing a model). Finding the edges of a
+   dense mesh used string keys and one small array per edge, which took tens of seconds and gigabytes on a few million triangles,
+   once for the 3D outlines and again for every drawing. Both now share one pass over typed arrays (weld by a number hash, then
+   an edge hash table); same output as before. */
+function mpjEdgesFast(g){const P=g.attributes.position;if(!P||P.isInterleavedBufferAttribute||P.itemSize!==3)return null;
+  const A=P.array,nv=P.count,I=g.index?g.index.array:null,n=I?I.length:nv,tri=Math.floor(n/3);
+  let sz=1;while(sz<nv*2)sz<<=1;const msk=sz-1,tab=new Int32Array(sz).fill(-1),Q=new Int32Array(nv*3),rm=new Int32Array(nv),wp=new Float32Array(nv*3);let u=0;
+  for(let v=0;v<nv;v++){const x=A[3*v],y=A[3*v+1],z=A[3*v+2],qx=Math.round(x*1e4),qy=Math.round(y*1e4),qz=Math.round(z*1e4);
+    let h=(Math.imul(qx,73856093)^Math.imul(qy,19349663)^Math.imul(qz,83492791))&msk,id;
+    for(;;){id=tab[h];if(id<0){id=u++;tab[h]=id;Q[3*id]=qx;Q[3*id+1]=qy;Q[3*id+2]=qz;wp[3*id]=x;wp[3*id+1]=y;wp[3*id+2]=z;break;}
+      if(Q[3*id]===qx&&Q[3*id+1]===qy&&Q[3*id+2]===qz)break;h=(h+1)&msk;}
+    rm[v]=id;}
+  const fn=new Float32Array(tri*3);let es=1;while(es<tri*3)es<<=1;const em=es-1,et=new Int32Array(es).fill(-1);
+  const ne=Math.min(tri*3,es),ea=new Int32Array(ne),eb=new Int32Array(ne),t1=new Int32Array(ne),t2=new Int32Array(ne).fill(-1),nt=new Uint8Array(ne);let m=0;
+  const add=(p,q,t)=>{if(p>q){const s=p;p=q;q=s;}let h=(Math.imul(p,73856093)^Math.imul(q,19349663))&em;
+    for(;;){const e=et[h];if(e<0){et[h]=m;ea[m]=p;eb[m]=q;t1[m]=t;nt[m]=1;m++;return;}if(ea[e]===p&&eb[e]===q){if(nt[e]===1)t2[e]=t;if(nt[e]<255)nt[e]++;return;}h=(h+1)&em;}};
+  for(let t=0;t<tri;t++){const a=rm[I?I[3*t]:3*t],b=rm[I?I[3*t+1]:3*t+1],c=rm[I?I[3*t+2]:3*t+2];if(a===b||b===c||a===c)continue;
+    const bx=wp[3*b]-wp[3*a],by=wp[3*b+1]-wp[3*a+1],bz=wp[3*b+2]-wp[3*a+2],cx=wp[3*c]-wp[3*a],cy=wp[3*c+1]-wp[3*a+1],cz=wp[3*c+2]-wp[3*a+2];
+    let nx=by*cz-bz*cy,ny=bz*cx-bx*cz,nz=bx*cy-by*cx;const L=Math.hypot(nx,ny,nz);if(L<1e-12)continue;fn[3*t]=nx/L;fn[3*t+1]=ny/L;fn[3*t+2]=nz/L;
+    add(a,b,t);add(b,c,t);add(c,a,t);}
+  const out=new Int32Array(m*5),cosT=Math.cos(25*Math.PI/180);
+  for(let e=0;e<m;e++){const o=5*e,s=t1[e],r=t2[e];out[o]=ea[e];out[o+1]=eb[e];out[o+2]=s;
+    if(r<0||nt[e]>2){out[o+3]=nt[e]>2?r:-1;out[o+4]=1;continue;}
+    out[o+3]=r;out[o+4]=fn[3*s]*fn[3*r]+fn[3*s+1]*fn[3*r+1]+fn[3*s+2]*fn[3*r+2]<cosT?1:2;}
+  return{wp:wp.slice(0,u*3),fn,ed:out,tri};}
+{const _me=mpjEdges;mpjEdges=function(g){let E=MPJ.edges.get(g);if(E)return E;try{E=mpjEdgesFast(g);}catch(e){console.warn(e);E=null;}
+  if(!E)return _me.apply(this,arguments);MPJ.edges.set(g,E);return E;};}
+// 3D outlines of imported objects: borders and folds from the same pass (30 degrees, 40 on very dense meshes, as before)
+{const _ge=geoEdges;geoEdges=function(id){const T=geoThree(id);if(!T||!T.mesh)return null;if(T.edges)return T.edges;
+  let E=null;try{E=mpjEdges(T.mesh);}catch(e){}if(!E||!E.ed)return _ge.apply(this,arguments);
+  const cs=Math.cos((T.mesh.attributes.position.count>300000?40:30)*Math.PI/180),{wp,fn,ed}=E,L=[];
+  for(let o=0;o<ed.length;o+=5){const s=ed[o+2],r=ed[o+3];if(r>=0&&ed[o+4]!==1)continue;
+    if(r>=0&&fn[3*s]*fn[3*r]+fn[3*s+1]*fn[3*r+1]+fn[3*s+2]*fn[3*r+2]>cs)continue;
+    const p=ed[o],q=ed[o+1];L.push(wp[3*p],wp[3*p+1],wp[3*p+2],wp[3*q],wp[3*q+1],wp[3*q+2]);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(L,3));T.edges=g;return g;};}
 </script>
 
 </html>
