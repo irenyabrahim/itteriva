@@ -2482,7 +2482,7 @@ function solidMatFor(s){const L=objLayer(s);if(L==='L0'&&!s.col)return solidMat;
 /* ---------- Imported geometry: stored once per object in IndexedDB (too big for localStorage), shared by copies ---------- */
 const GEO=new Map(),GEO3=new Map();
 const IDB=(()=>{let p=null;return()=>p||(p=new Promise((res,rej)=>{try{const r=indexedDB.open('s2b-geo',1);r.onupgradeneeded=()=>r.result.createObjectStore('g');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}}));})();
-async function geoPut(id,G){return geoPutMany([[id,G]]);}
+
 // one transaction for a whole import; the model doesn't wait for it
 async function geoPutMany(L){for(const[id,G]of L)GEO.set(id,G);try{const db=await IDB();await new Promise((res,rej)=>{const t=db.transaction('g','readwrite'),st=t.objectStore('g');for(const[id,G]of L)st.put(G,id);t.oncomplete=res;t.onerror=()=>rej(t.error);t.onabort=()=>rej(t.error);});return true;}catch(e){return false;}}
 async function geoLoadAll(){const need=[...new Set(S.solids.filter(s=>s.kind==='mesh'&&!GEO.has(s.geo)).map(s=>s.geo))];if(!need.length)return;
@@ -3030,7 +3030,7 @@ function scaleSel1(f){const m=D.scaleMode||'3D';
   if(S.sel==='bldg'&&S.pts){const c=PIV?[PIV.x,PIV.z]:bldgCenter();if(m!=='Height'){S.pts=S.pts.map(([x,z])=>[rnd3(c[0]+(x-c[0])*f),rnd3(c[1]+(z-c[1])*f)]);S.windows.forEach(w=>w.s=rnd3(w.s*f));}
     if(m!=='2D')S.height=Math.min(HMAX(),Math.max(2.4,rnd3(S.height*f)));return true;}
   const s=selSolid();if(!s)return false;if(m!=='Height'){const c=PIV||solidCenter(s);s.pos=[rnd3(c.x-(c.x-s.pos[0])*f),s.pos[1],rnd3(c.z-(c.z-s.pos[2])*f)];s.sc[0]*=f;s.sc[2]*=f;}if(m!=='2D')s.sc[1]*=f;if(s.kind==='sphere'&&m!=='3D'){/* spheres stay round */s.sc=[s.sc[0],s.sc[0],s.sc[0]];}return true;}
-function copySel(){const ids=selIds(),out=[];for(const id of ids){S.sel=id;S.more=[];const c=copySel1();if(c)out.push(c);}setSelIds(out.map(c=>c.id));return out[0]||null;}
+
 function copySel1(){let c;if(S.sel==='bldg'&&S.pts)c=newSolid('Extrusion',S.pts,S.height);else{const s=selSolid();if(!s)return null;c=clone(s);c.id='s'+(++solidSeq);}
   const P=solidFoot(c),xs=P.map(p=>p[0]);c.pos[0]=rnd3(c.pos[0]+(Math.max(...xs)-Math.min(...xs))+1);S.solids.push(c);return c;}
 function deleteSel(){const ids=selIds(),names=[];for(const id of ids){S.sel=id;S.more=[];const n=deleteSel1();if(n)names.push(n);}setSelIds([]);return names.length>1?plural(names.length,'object'):names[0]||null;}
@@ -3641,12 +3641,7 @@ function brepSlice(W,ax,v){const segs=[],o=ax===1?[0,2]:[0,1];
   for(const f of W)for(const P of f){const pts=[];for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length],da=a[ax]-v,db=b[ax]-v;if(da===0&&db===0)continue;if((da<=0)!==(db<=0)){const t=da/(da-db);pts.push([a[o[0]]+(b[o[0]]-a[o[0]])*t,a[o[1]]+(b[o[1]]-a[o[1]])*t]);}}
     if(pts.length>=2&&Math.hypot(pts[0][0]-pts[1][0],pts[0][1]-pts[1][1])>1e-7)segs.push([pts[0],pts[1]]);}
   return chainLoops(segs);}
-function chainLoops(segs){const near=(p,q)=>Math.abs(p[0]-q[0])<1e-4&&Math.abs(p[1]-q[1])<1e-4,used=new Set(),loops=[];
-  for(let i=0;i<segs.length;i++){if(used.has(i))continue;used.add(i);const L=[segs[i][0],segs[i][1]];
-    for(let g=0;g<segs.length;g++){const end=L[L.length-1];if(L.length>2&&near(end,L[0])){L.pop();break;}let nx=-1,q=null;for(let j=0;j<segs.length&&nx<0;j++){if(used.has(j))continue;if(near(segs[j][0],end)){nx=j;q=segs[j][1];}else if(near(segs[j][1],end)){nx=j;q=segs[j][0];}}
-      if(nx<0)break;used.add(nx);L.push(q);}
-    if(L.length>2&&Math.abs(area(L))>1e-6)loops.push(L);}
-  return loops;}
+
 // a polygon cut back to the far side of a section plane (z <= zc)
 function clipZ(P,zc){const out=[];for(let i=0;i<P.length;i++){const a=P[i],b=P[(i+1)%P.length],ia=a[2]<=zc,ib=b[2]<=zc;if(ia)out.push(a);if(ia!==ib){const t=(zc-a[2])/(b[2]-a[2]);out.push([a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,zc]);}}return out;}
 
@@ -3879,7 +3874,7 @@ function endBox(apply){const b=sbox;sbox=null;selRect.hidden=true;hiG.clear();ti
 window.addEventListener('pointerup',e=>{if(sbox)endBox(true);});
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&sbox&&sbox.on){endBox(false);e.stopPropagation();}},true);
 function needPick(id,what){if(selIds().length)return true;postPick=id;setTool('select');renderOpts();msg(`Select ${what}, then press Enter.`);return false;}
-function addObj(o,y){S.solids.push(o);return o;}
+
 function replaceObjs(ids,news){S.solids=S.solids.filter(o=>!ids.includes(o.id));news.forEach(o=>S.solids.push(o));if(ids.includes('bldg')){S.pts=null;S.built=false;S.windows=[];S.wallAsm={};S.roomNames=[];S.levels=null;}setSelIds(news.map(o=>o.id));S.example=false;}
 const plural=(n,w)=>`${n} ${n===1?w:w==='copy'?'copies':w+'s'}`;
 
@@ -4665,7 +4660,7 @@ const acList=$('#acList'),acUl=$('#acUl'),acGhost=$('#acGhost'),acSrch=$('#acSrc
 const ACH={rhino:'Autocomplete',revit:'Keyboard shortcuts',sketchup:'Search',autocad:'AutoComplete'};
 const ACR=(()=>{try{return JSON.parse(localStorage.getItem('s2b-recent')||'[]');}catch(e){return[];}})();
 function acNote(id){const i=ACR.indexOf(id);if(i>=0)ACR.splice(i,1);ACR.unshift(id);ACR.length=Math.min(ACR.length,12);try{localStorage.setItem('s2b-recent',JSON.stringify(ACR));}catch(e){}}
-const acUp=w=>w.toUpperCase(),acShort=a=>a.slice().sort((x,y)=>x.length-y.length)[0];
+const acUp=w=>w.toUpperCase();
 // the command name each program would show for a tool
 function acToolName(t,k){const al=t.alias[k]||[];
   if(k==='rhino')return t.key.rhino&&/^[A-Z][A-Za-z0-9]+$/.test(t.key.rhino)?t.key.rhino:(al[0]?al[0][0].toUpperCase()+al[0].slice(1):t.label);
@@ -5123,10 +5118,7 @@ const PAPERN={A4:'A4',A3:'A3',A2:'A2',A1:'A1',A0:'A0',Letter:'Letter (8½ × 11 
 const SCM=[1,2,5,10,20,25,50,100,200,250,500,1000,2000,2500,5000];
 const SCI=[[1,'12" = 1\'-0"'],[2,'6" = 1\'-0"'],[4,'3" = 1\'-0"'],[8,'1½" = 1\'-0"'],[12,'1" = 1\'-0"'],[16,'¾" = 1\'-0"'],[24,'½" = 1\'-0"'],[32,'⅜" = 1\'-0"'],[48,'¼" = 1\'-0"'],[64,'3/16" = 1\'-0"'],[96,'⅛" = 1\'-0"'],[128,'3/32" = 1\'-0"'],[192,'1/16" = 1\'-0"'],[240,'1" = 20\''],[384,'1/32" = 1\'-0"'],[480,'1" = 40\''],[600,'1" = 50\''],[1200,'1" = 100\''],[2400,'1" = 200\'']];
 const scList=()=>imperial()?SCI.map(x=>x[0]):SCM;
-function scGroups(){const imp=SCI.map(x=>`<option value="${x[0]}">${hx(x[1])}</option>`).join(''),met=SCM.map(d=>`<option value="${d}">1:${d}</option>`).join(''),
-    gi=`<optgroup label="Feet and inches">${imperial()?imp:SCI.filter(x=>!SCM.includes(x[0])).map(x=>`<option value="${x[0]}">${hx(x[1])}</option>`).join('')}</optgroup>`,
-    gm=`<optgroup label="Metric">${imperial()?SCM.filter(d=>!SCI.some(x=>x[0]===d)).map(d=>`<option value="${d}">1:${d}</option>`).join(''):met}</optgroup>`;
-  return imperial()?gi+gm:gm+gi;}
+
 function scName(d){if(!d)return'Not to scale';const i=SCI.find(x=>x[0]===d);return i&&(imperial()||!SCM.includes(d))?i[1]:`1:${d}`;}
 function sheetDef(){if(!S.sheetDef||!PAPERMM[S.sheetDef.size])S.sheetDef={size:imperial()?'Tabloid':'A3',ori:'l'};return S.sheetDef;}
 function paperOf(v){const d=sheetDef(),o0=PAPOVR,k=o0&&PAPERMM[o0.key]?o0.key:v&&v.paper&&PAPERMM[v.paper]?v.paper:d.size,o=o0?o0.ori||'l':v&&v.paper&&v.ori?v.ori:d.ori||'l';
@@ -5723,10 +5715,10 @@ function drawDetail(cv=$('#detail'),vw=null){cv._kind='detail';const{c,w,h}=fram
     const tot=t=>`${dimD(t)}`,rv=th=>im?`R-${(th.R*5.678).toFixed(0)} · U ${(th.U/5.678).toFixed(3)}`:`R ${th.R.toFixed(2)} · U ${th.U.toFixed(2)} W/m²K`;
     for(const[k,title,dir,list,pi,P0]of[['wall','Wall','Out → in',S.layers,S.preset,PRESETS],['floor','Floor','Top → ground',S.floorLayers,S.fpreset,FPRESETS],['roof','Roof','Top → ceiling',S.roofLayers,S.rpreset,RPRESETS]]){
       c.fillStyle=ANN;c.font=`600 ${F(10.5)}px ${FL}`;c.fillText(UC(title),...P(x0,y+5));c.font=`400 ${F(8)}px ${FL}`;c.fillStyle=MUTED;c.textAlign='right';
-      let pn=pi>=0?P0[pi].name:'Custom';while(pn.length>4&&c.measureText(pn).width>(pw-60)*sc)pn=pn.slice(0,-2)+'…';c.fillText(pn,...P(x0+pw,y+5));c.textAlign='left';y+=16;
+      let pn=pi>=0?P0[pi].name:'Custom';while(pn.length>4&&c.measureText(pn).width>(pw-60)*sc)pn=ell(pn);c.fillText(pn,...P(x0+pw,y+5));c.textAlign='left';y+=16;
       for(const[m,t]of list){const a=P(x0,y),b=P(x0+20,y+10);c.beginPath();c.rect(a[0],a[1],b[0]-a[0],b[1]-a[1]);c.fillStyle=getPat(c,m,0);c.fill();c.strokeStyle=INK;c.lineWidth=LW.hair;c.stroke();
         c.fillStyle=ANN;c.font=`400 ${F(8.5)}px ${FN}`;c.fillText(dimD(t/1000),...P(x0+25,y+5));c.font=`400 ${F(8.5)}px ${FL}`;
-        let nm=MATS[m].name;while(nm.length>4&&c.measureText(nm).width>(pw-82)*sc)nm=nm.slice(0,-2)+'…';c.fillText(nm,...P(x0+80,y+5));y+=12.5;}
+        let nm=MATS[m].name;while(nm.length>4&&c.measureText(nm).width>(pw-82)*sc)nm=ell(nm);c.fillText(nm,...P(x0+80,y+5));y+=12.5;}
       const th=thermal(list,k);c.fillStyle=MUTED;c.font=`400 ${F(8.5)}px ${FN}`;c.fillText(`${tot(list.reduce((a,l)=>a+l[1],0)/1000)} · ${rv(th)}`,...P(x0,y+5));
       y+=12;c.strokeStyle=INK;c.lineWidth=LW.thin;c.beginPath();c.moveTo(...P(x0,y));c.lineTo(...P(x0+pw,y));c.stroke();y+=7;}
     c.textBaseline='alphabetic';}
@@ -5771,6 +5763,8 @@ function drawEnts(c,cv,sheet,X,base,front){const L=(S.ent||[]).filter(e=>e.sheet
 // environment image behind a sheet: covers the paper, faded so linework stays legible
 function drawEnv(c,w,h,sheet){const id=(SS.env||{})[sheet];if(!id)return;const im=imgFor(id);if(!im)return;const r=Math.max(w/im.naturalWidth,h/im.naturalHeight),iw=im.naturalWidth*r,ih=im.naturalHeight*r;
   c.save();c.globalAlpha=SS.envOp??0.45;c.drawImage(im,(w-iw)/2,(h-ih)/2,iw,ih);c.restore();}
+// shorten a label by one step: same as cutting two characters and adding an ellipsis, and always shorter
+function ell(s){const E='…';return s.endsWith(E)?s.slice(0,-1-E.length)+E:s.slice(0,-2)+E;}
 function drawSheets(){viewsInit();drawCur('plan');drawCur('section');drawCur('elev');drawCur('detail');if(typeof vUI==='function')vUI();}
 
 function levels(c,X,md,bx1){c.strokeStyle=ANN;c.fillStyle=ANN;c.font=`400 ${fz(9.5)}px ${FN}`;
@@ -5785,7 +5779,7 @@ function levels(c,X,md,bx1){c.strokeStyle=ANN;c.fillStyle=ANN;c.font=`400 ${fz(9
    The sheets are views of one model, so they can be edited: an edit is checked against the linking rules before it applies,
    the other sheets and the 3D follow it, and every edit is kept as a version. Comments pin to a spot on a sheet. */
 const sxDlg=$('#sheetDlg'),sxCv=$('#sxCanvas');let sxTab='plan',sxView={k:1,tx:0,ty:0},sxMode='view',sxPrev=null,sxLinked=false,sxPanelTab='comments';
-const SXN={rhino:'Maximize',autocad:'Layout',revit:'Open sheet',sketchup:'Open'};
+
 const SHEETS={plan:'Plan',section:'Section A',elev:'South elevation',detail:'Details'},LINKED=['plan','section','elev'];
 const DRAW={plan:drawPlan,section:drawSection,elev:drawElev,detail:drawDetail};
 // each program's words for the three sheet modes and the two panels
@@ -7213,16 +7207,33 @@ function drawVP(v,H,th){applyMode(v.mode);gumFor(v);if(v.camera===v.persp){const
     {const pv=planView(v);renderer.clippingPlanes=pv?planClip:clip3dPlanes();if(pv)v.camera.layers.enable(2);else v.camera.layers.disable(2);if(sun.castShadow===pv)sun.castShadow=!pv;}
     const hid=[];if(th){gumG.visible=false;for(const o of[sketchG,...world.children])if(o.visible&&(o===sketchG||o.material===selLineMat||o.material===faceMat)){o.visible=false;hid.push(o);}}
     updateSil(v.camera);renderer.render(scene,v.camera);for(const o of hid)o.visible=true;}
+// redraw on demand: RDR.d marks a change, RDR.t keeps full speed for a moment after input, and a once-a-second heartbeat catches anything else
+var RDR={d:1,t:0,at:0,sig:'',f:-1};
+function rdrWake(ms){RDR.d=1;if(ms)RDR.t=Math.max(RDR.t,performance.now()+ms);}
+function camSig(v){const c=v.camera,p=c.position,q=c.quaternion;return [v.x,v.y,v.w,v.h,v.mode,v.view,c.uuid,p.x,p.y,p.z,q.x,q.y,q.z,q.w,c.zoom,c.near,c.far,c.left,c.right,c.top,c.bottom,c.fov,c.aspect].join(',');}
+try{const hot=()=>rdrWake(1000);for(const k of['pointerdown','pointermove','pointerup','wheel','keydown','keyup','input','change','click','dragover','drop','resize','focus'])addEventListener(k,hot,{capture:true,passive:true});
+  document.addEventListener('visibilitychange',hot);
+  const st=window.setTimeout;window.setTimeout=function(f,...a){return st.call(this,typeof f==='function'?function(){try{return f.apply(this,arguments);}finally{RDR.d=1;}}:f,...a);};
+  const raf=window.requestAnimationFrame;window.requestAnimationFrame=function(f){return raf.call(this,f===loop||typeof f!=='function'?f:function(){try{return f.apply(this,arguments);}finally{RDR.d=1;}});};
+  const O=THREE.Object3D.prototype,oa=O.add,or=O.remove;O.add=function(){RDR.d=1;return oa.apply(this,arguments);};O.remove=function(){RDR.d=1;return or.apply(this,arguments);};
+  for(const C of[THREE.Texture,THREE.Material,THREE.BufferAttribute]){const d=Object.getOwnPropertyDescriptor(C.prototype,'needsUpdate');if(d&&d.set&&d.configurable)Object.defineProperty(C.prototype,'needsUpdate',{configurable:true,get:d.get,set(x){RDR.d=1;d.set.call(this,x);}});}}catch(e){console.error(e);}
 function loop(){requestAnimationFrame(loop);const H=vp.getBoundingClientRect().height;renderer.setScissorTest(true);renderer.shadowMap.needsUpdate=true;
-  if(typeof camJob==='function'&&!CAP)try{camJob(H);}catch(e){console.error(e);}
-  for(const v of VPS){if(!v.on)continue;try{camOK(v);v.controls.update();farFit(v);drawVP(v,H);}catch(e){if(!loop.err){loop.err=1;console.error(e);msg(`The ${vpTitle(v)||v.name} view hit an error and is skipped: ${hx(e.message||String(e))}. The other views keep drawing.`);}}}
+  if(renderer.info.render.frame!==RDR.f)RDR.d=1;
+  if(typeof camJob==='function'&&!CAP){const f0=renderer.info.render.frame;try{camJob(H);}catch(e){console.error(e);}if(renderer.info.render.frame!==f0)RDR.d=1;}
+  let sg=H+'|'+glc.width+'x'+glc.height;const bad=new Map();
+  for(const v of VPS){if(!v.on)continue;try{camOK(v);if(v.controls.update())RDR.d=1;farFit(v);sg+='|'+camSig(v);}catch(e){bad.set(v,e);}}
+  const now=performance.now();if(sg!==RDR.sig){RDR.sig=sg;RDR.d=1;}
+  if(!CAP&&!RDR.d&&now>RDR.t&&now-RDR.at<1000)return;
+  RDR.d=0;RDR.at=now;
+  for(const v of VPS){if(!v.on)continue;try{if(bad.has(v))throw bad.get(v);drawVP(v,H);}catch(e){if(!loop.err){loop.err=1;console.error(e);msg(`The ${vpTitle(v)||v.name} view hit an error and is skipped: ${hx(e.message||String(e))}. The other views keep drawing.`);}}}
+  RDR.f=renderer.info.render.frame;
   renderer.clippingPlanes=[];
   if(S.built&&MD&&!['front','back','left','right'].includes(AV.view)){const lp=labelPoint(MD.offs[MD.N]);const p=new THREE.Vector3(lp[0],0.05,lp[1]).project(AV.camera);
     if(p.z<1&&Math.abs(p.x)<1&&Math.abs(p.y)<1){roomTag.hidden=false;roomTag.classList.toggle('bad',typeof progBad==='function'&&progBad(S.room||'Room',0));roomTag.style.left=(AV.x+(p.x+1)/2*AV.w)+'px';roomTag.style.top=(AV.y+(1-p.y)/2*AV.h)+'px';
       const t=`<b>${(S.room||'Room').replace(/[<&]/g,'')}</b><span>${fmtA(Math.abs(area(MD.offs[MD.N])))}</span>`;if(roomTag.innerHTML!==t)roomTag.innerHTML=t;}else roomTag.hidden=true;}
   else roomTag.hidden=true;
   if(CAP){const f=CAP;CAP=null;try{f();}catch(e){console.error(e);}}
-  roomTags3D();}
+  roomTags3D();RDR.f=renderer.info.render.frame;}
 // every room the partitions make gets its own tag in 3D; click a tag to rename that room
 var RT3=[],rtEdit=null;
 function roomTags3D(){const box=$('#roomTags');if(!box)return;const on=!roomTag.hidden&&S.built&&MD;let R=on?roomsOf(MD,typeof PLANCUT!=='undefined'?PLANCUT:1.2):[];
@@ -8294,7 +8305,7 @@ function projectJSON(){const geo={};for(const s of S.solids)if(s.kind==='mesh'&&
 /* ---------- Print / PDF of sheets (Rhino Print to PDF, AutoCAD PLOT and PUBLISH, Revit Print / Export PDF, SketchUp LayOut Export PDF).
    Each sheet is drawn again, off screen, at print resolution and written as one page of a PDF (a JPEG per page, so no library is needed). ---------- */
 var PLN={rhino:{t:'Print',btn:'Print',go:'Save PDF'},autocad:{t:'PLOT / PUBLISH',btn:'Plot',go:'Publish to PDF'},revit:{t:'Export PDF',btn:'Export PDF',go:'Export PDF'},sketchup:{t:'LayOut: Export PDF',btn:'Export PDF',go:'Export PDF'}};
-var PAPERSZ={A4:[842,595],A3:[1191,842],A2:[1684,1191],A1:[2384,1684],Letter:[792,612],Tabloid:[1224,792],ArchD:[2592,1728]};
+
 const plotDlg=$('#plotDlg');let plotSel=null;
 function plotSheets(){viewsInit();return(S.views||[]).map(v=>({id:v.id,kind:v.kind,name:v.name,num:vNum(v.id)}));}
 function openPlot(){const N=PLN[S.keymap]||PLN.rhino,L=plotSheets(),cur=sxOpen()?sxTab:null;$('#plotTitle').textContent=N.t;$('#plotGo').textContent=N.go;
@@ -8711,7 +8722,7 @@ applyTemplate=function(){const l=layEff(),f=$('#cmdForm'),vpEl=$('#vp'),view=$('
   if(where==='float'){if(f.parentNode!==vpEl)vpEl.appendChild(f);}
   else if(where==='top'){if(f.nextElementSibling!==$('.vbar'))view.insertBefore(f,$('.vbar'));}
   else{const a=$('#dockB')||$('#vpRow')||vpEl;if(f.previousElementSibling!==a)a.after(f);}
-  renderLayoutSel();try{panLabels();}catch(e){}if(typeof renderPTabs==='function')renderPTabs();hdrSync();requestAnimationFrame(()=>{resize();if(typeof drawSheets==='function')drawSheets();});};
+  renderLayoutSel();try{panLabels();}catch(e){}if(typeof renderPTabs==='function')renderPTabs();hdrSync();if(!window.ATQ){window.ATQ=1;requestAnimationFrame(()=>{window.ATQ=0;resize();if(typeof drawSheets==='function')drawSheets();});}};
 layWide.addEventListener('change',applyTemplate);
 renderLearnSel=function(){const sel=$('#learnSel');if(!sel)return;
   sel.innerHTML='<option value="">Just work</option>'+Object.keys(KM).map(k=>`<option value="${k}">${KM[k]}${k===S.keymap?' (your controls)':''}</option>`).join('');
@@ -10275,7 +10286,7 @@ function schHTML(k,board){const D=schData(k),ix=board?D.brd:D.cols.map((_,i)=>i)
     return`<td><input data-r="${ri}" data-c="${ci}" value="${hx(c.v)}" aria-label="${hx(D.cols[ci])}" autocomplete="off"></td>`;};
   return`<table>${board?`<caption style="text-align:left;font-weight:600;padding-bottom:.2em">${SCHK[k]}</caption>`:''}<thead><tr>${ix.map(i=>`<th>${D.cols[i]}</th>`).join('')}</tr></thead><tbody>${D.rows.map((r,ri)=>`<tr${!board&&ri===SCH.flash?' class="flash"':''}>${ix.map(ci=>cell(r.c[ci],ri,ci)).join('')}</tr>`).join('')}</tbody>${D.tot?`<tfoot><tr>${ix.map(i=>`<td>${hx(D.tot[i]||'')}</td>`).join('')}</tr></tfoot>`:''}</table>`;}
 function schCanvas(c,k,x,y,w,fn,lh,ppm){const D=schData(k),ix=D.brd,cw=w/ix.length;c.fillStyle='#16191d';c.textBaseline='top';let yy=y;
-  const row=(a,bold)=>{c.font=fn.replace('italic ','').replace(/^\d+ /,bold?'600 ':'400 ');a.forEach((t,i)=>{let s2=String(t||'');while(s2.length>2&&c.measureText(s2).width>cw-2)s2=s2.slice(0,-2)+'…';c.fillText(s2,x+i*cw,yy+lh*0.15);});yy+=lh*1.25;c.fillRect(x,yy-1,w,Math.max(1,ppm*0.15));};
+  const row=(a,bold)=>{c.font=fn.replace('italic ','').replace(/^\d+ /,bold?'600 ':'400 ');a.forEach((t,i)=>{let s2=String(t||'');while(s2.length>2&&c.measureText(s2).width>cw-2)s2=ell(s2);c.fillText(s2,x+i*cw,yy+lh*0.15);});yy+=lh*1.25;c.fillRect(x,yy-1,w,Math.max(1,ppm*0.15));};
   c.font=fn.replace('italic ','').replace(/^\d+ /,'600 ');c.fillText(SCHK[k],x,yy);yy+=lh*1.35;
   if(!D.rows.length){c.font=fn;c.fillText(schEmpty(k),x,yy);return;}row(ix.map(i=>D.cols[i]),1);D.rows.forEach(r=>row(ix.map(i=>r.c[i].v)));if(D.tot)row(ix.map(i=>D.tot[i]||''),1);}
 function schRender(){const N=SCHN[S.keymap]||SCHN.rhino;$('#schT').textContent=N.t;
@@ -10654,10 +10665,7 @@ nuP.addEventListener('click',e=>{const b=e.target.closest('[data-nu],[data-les],
   else if(a==='back')nuStep(-1);else if(a==='fwd')nuStep(1);
   else if(a==='show')nuShow();});
 nuP.addEventListener('submit',e=>{if(e.target.id!=='nuAsk')return;e.preventDefault();const q=$('#nuQ').value.trim();if(q)nuAsk(q);});
-function nuShowOld(){const ls=nuLessons(),L=ls[NU.les];if(!L)return;const k=L.steps.findIndex((s,j)=>!NU.done[NU.les+':'+j]);const s=L.steps[Math.max(0,k)];
-  const tgt={0:null}[0];const T=/Line/.test(s[0])?'sketch':/Rectangle/.test(s[0])?'rect':/Move/.test(s[0])?'move':/Erase/.test(s[0])?'delete':/Measure/.test(s[0])?'distance':/Select/.test(s[0])?'select':null;
-  const el=T&&document.querySelector(`#gCore [data-tool="${T}"]`);if(el)nuFlash(el);if(/Undo/.test(s[0]))nuFlash($('#undoBtn'));if(/Zoom|Slide|click|Click|type|Type|Finish/.test(s[0])&&!el)nuFlash($('#vp'));
-  nuSay({t:s[0],say:s[1]||L.d,acts:[['Got it','ok']],at:el?'tool':'vp',sig:'You asked to be shown',force:true});}
+
 function nuNext(skip){const ls=nuLessons();if(NU.les<ls.length){NU.les++;nuResetLesson();nuSave();nuApply();nuLog(skip?'Skipped to: '+(ls[NU.les]?ls[NU.les].t:'Tier 1 check'):'Lesson done. Next: '+(ls[NU.les]?ls[NU.les].t:'Tier 1 check'));
   if(NU.les>=ls.length)nuSay({t:'Tier 1 check',say:`Last step of Tier 1: draw a room ${nuU().rx} on your own, typing the sizes. I will check it as soon as it is closed.`,acts:[['Got it','ok']],at:'vp',sig:'All Tier 1 lessons done',force:true});
   else if(!skip)nuSay({t:'Nice work',say:`Lesson done. Next: ${ls[NU.les].t}. ${ls[NU.les].d}`,acts:[['Next lesson','ok']],at:'vp',sig:'Lesson goal met',force:true,clickHide:true});}}
@@ -10691,7 +10699,7 @@ if(window.ResizeObserver)new ResizeObserver(()=>{if(!nuBub.hidden&&NUB)nuBubPlac
 function nuBubHide(){nuBub.hidden=true;NUB=null;}
 nuBub.addEventListener('click',e=>{const b=e.target.closest('[data-b]');if(!b)return;const k=b.dataset.b,o=NUB;nuBubHide();if(o&&o.do&&o.do[k])o.do[k]();});
 // ---------- watching ----------
-let NUMOUSE={x:0,y:0},NUIDLE=null;
+let NUMOUSE={x:0,y:0};
 const vpEl=$('#vp');
 vpEl.addEventListener('wheel',()=>{if(NU.on){NUS.zoom=true;NUS.lastAct=Date.now();}},{passive:true});
 vpEl.addEventListener('pointerdown',e=>{if(!NU.on)return;NUS.lastAct=Date.now();if(e.button===1||e.button===2||NUSPACE){const x0=e.clientX,y0=e.clientY;const mv=ev=>{if(Math.hypot(ev.clientX-x0,ev.clientY-y0)>12){NUS.pan=true;removeEventListener('pointermove',mv,true);}};addEventListener('pointermove',mv,true);addEventListener('pointerup',()=>removeEventListener('pointermove',mv,true),{once:true,capture:true});}
