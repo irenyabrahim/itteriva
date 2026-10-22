@@ -1539,6 +1539,12 @@ body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padd
 
 /* st11 (Ireny 2026-10-22): a docked command line keeps the same height whether or not a message shows, so the view never resizes (it looked like a zoom on every select) */
 .cmd.dock output,.cmd.dock output:empty{display:block;flex:1 1 100%;height:2.9em;max-height:2.9em;min-height:2.9em;line-height:1.45;overflow:auto;max-width:none;white-space:normal;text-overflow:clip;padding-left:0;border-left:0}
+
+/* st12: the floor of the picked clipping plane */
+.frcard .frlv{padding:2px 4px;margin:0 -4px;border-radius:5px;cursor:pointer}
+.frcard .frlv:hover{background:var(--hover,rgba(127,127,127,.08))}
+.frcard .frlv.on{background:color-mix(in srgb,var(--accent) 14%,transparent);box-shadow:inset 3px 0 0 var(--accent)}
+.frcard .frlv.on em{color:var(--accent);font-weight:600}
 </style>
 
 <header class="top">
@@ -12403,6 +12409,14 @@ try{clipSig='';clipUI();clipShowSync();}catch(e){}
 
 /* st11: each new message starts at its first line */
 new MutationObserver(()=>{cmdMsg.scrollTop=0;}).observe(cmdMsg,{childList:true,subtree:true,characterData:true});
+
+/* st12 (Ireny 2026-10-22): the floor of the picked clipping plane is highlighted in the levels list, and clicking a floor's row picks its plane */
+function frLvHi(){const L=frLvs();let hit=null;document.querySelectorAll('#frCard .frlv').forEach((r,i)=>{const l=L[i],p=l&&frPlanOf(l.y);r.dataset.vid=p?p.id:'';const on=!!p&&p.id===CLSEL;r.classList.toggle('on',on);if(on)hit=r;});
+  if(hit&&!hit.dataset.seen){hit.dataset.seen='1';try{hit.scrollIntoView({block:'nearest'});}catch(e){}}}
+{const _fl=frLvRender;frLvRender=function(){const r=_fl.apply(this,arguments);try{frLvHi();}catch(e){}return r;};}
+{const _cs=clipSelect;clipSelect=function(){const r=_cs.apply(this,arguments);try{frLvHi();}catch(e){}return r;};}
+document.addEventListener('click',e=>{const row=e.target.closest&&e.target.closest('#frCard .frlv');if(!row||e.target.closest('input,button'))return;const id=row.dataset.vid;
+  if(!id){msg('This level has no plan yet. Tick it and press Make plans at these levels.');return;}if(S.clipShow!=='on')clipShowSet('on');clipSelect(CLSEL===id?null:id);});
 </script>
 
 </html>
