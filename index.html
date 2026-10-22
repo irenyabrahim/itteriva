@@ -1525,6 +1525,17 @@ body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padd
 
 /* st7 (Ireny 2026-10-22): no panel bar (Arrange gone), no Panels section in Customize, strip always on */
 .pbar{display:none!important}.cpsec:has(#cpArr){display:none}
+
+/* st10 clipping planes: show/hide button, editable levels */
+#clipShowBtn{display:inline-flex;align-items:center;gap:5px;font-size:12px;text-transform:none;letter-spacing:0;white-space:nowrap}
+#clipShowBtn svg{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round}
+#clipShowBtn[aria-pressed="true"]{color:var(--accent);border-color:var(--accent)}
+.frlv{display:flex;align-items:center;gap:6px}.frlv em{margin-left:auto;text-align:right}
+.frht{border:0;background:none;padding:2px 4px;margin:0;font:inherit;color:inherit;border-radius:4px;cursor:text;text-decoration:underline dotted;text-underline-offset:3px}
+.frht:hover,.frht:focus-visible{background:var(--hover,rgba(127,127,127,.14))}
+.frin{width:104px;font:inherit;padding:2px 5px}
+.frx{border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:1px 5px;margin:0;cursor:pointer;border-radius:4px}
+.frx:hover,.frx:focus-visible{color:var(--ink);background:var(--hover,rgba(127,127,127,.14))}
 </style>
 
 <header class="top">
@@ -6733,7 +6744,7 @@ function vLayRows(v){const hl=new Set(v&&v.hl||[]),cnt={};for(const o of S.solid
 function viewVisCmd(lk){if(!['viewlayers','vplayer','vpfreeze','vpf','scenetags','detaillayers','layersindetail','viewvisibility','cropview','crop','cropregion','viewrange','annotationcrop','layoutlayers'].includes(lk))return false;
   viewsInit();const cur=sxOpen()&&vById(sxTab)?sxTab:vPick('plan'),v=vById(cur);if(!v||v.kind==='detail'){vDialog('plan',vPick('plan'));return true;}vDialog(v.kind,cur);return true;}
 function drawView(id,cv,vw){const v=vById(id);if(!v)return;const cv0=cv||$('#'+v.kind),f=VBASE&&VBASE[v.kind],prev=VCTX,prevH=VHIDE;if(!f)return;VCTX=vCtx(v);VHIDE=vHideFn(v);let r;
-  try{r=vRot(v)?withRot(VLOOK[v.look],()=>f(cv0,vw)):v.kind==='detail'&&v.wall>=0&&PRESETS[v.wall]?withWall(v.wall,()=>f(cv0,vw)):f(cv0,vw);}finally{VCTX=prev;VHIDE=prevH;}
+  try{r=vRot(v)?withRot(vTh(v),()=>f(cv0,vw)):v.kind==='detail'&&v.wall>=0&&PRESETS[v.wall]?withWall(v.wall,()=>f(cv0,vw)):f(cv0,vw);}finally{VCTX=prev;VHIDE=prevH;}
   if(!vw&&!VCTX)sxRedraw(v.kind);return r;}
 function drawCur(k){const f=DRAW[vPick(k)]||DRAW[k];if(f){const cv=$('#'+k);cv._sig=null;f(cv);}}
 function sheetSig(){return JSON.stringify(S,(k,v)=>k==='sel'||k==='more'||k==='face'||k==='vp'?undefined:v)+JSON.stringify(CO.notes)+sxSel+sxShowRes+(typeof ASSETS!=='undefined'?ASSETS.length:0)+(document.fonts?document.fonts.status:'');}
@@ -12256,6 +12267,136 @@ function psqTick(){if(PSQt)return;PSQt=true;Promise.resolve().then(()=>{PSQt=fal
   for(const e of MBQ)if(e[0]===VHIDE&&e[1]===VCTX&&e[2]===k)return e[3];const b=_mb.apply(this,arguments);MBQ.push([VHIDE,VCTX,k,b]);return b;};}
 {const _lo=layerOn;layerOn=function(id){psqTick();let r=LOQ.get(id);if(r===undefined){r=_lo.apply(this,arguments);LOQ.set(id,r);}return r;};}
 {const _rf=refresh;refresh=function(){psqClear();return _rf.apply(this,arguments);};}
+
+/* ---------- st10 (Ireny 2026-10-22): clipping planes made from the model's own floors, shown or hidden with one button,
+   picked in 3D and moved with handles. Plans move up and down; sections move across and turn about the vertical. ---------- */
+// the stock plan and sections only stand for something once a building is sketched; a free model lists what was set for it
+const CPSTOCK=new Set(['plan','section','v-secb']);
+function clipList(){const bld=!!(S.pts&&S.pts.length);return(S.views||[]).filter(v=>(v.kind==='section'||v.kind==='plan'&&!v.site)&&(bld||v.placed||!CPSTOCK.has(v.id)));}
+// a section's direction (0 looks north) and a point on its plane, in plan [x, z]
+function vTh(v){return v&&v.kind==='section'&&v.ang!=null&&isFinite(v.ang)?+v.ang:(VLOOK[v&&v.look||'N']||0);}
+function secP0(v){if(v.ang!=null&&v.p0)return v.p0.slice();const L=v.look||'N',ew=L==='E'||L==='W',o=vCtx(v),b=bounds(),at=o.at!=null?o.at:(ew?b.cx:b.cz);return ew?[at,b.cz]:[b.cx,at];}
+function angD(a,b){let d=(a-b)%(2*Math.PI);if(d>Math.PI)d-=2*Math.PI;if(d<-Math.PI)d+=2*Math.PI;return d;}
+function secSet(v,th,p){let best='N';for(const L of['N','E','S','W'])if(Math.abs(angD(th,VLOOK[L]))<Math.abs(angD(th,VLOOK[best])))best=L;
+  v.look=best;if(Math.abs(angD(th,VLOOK[best]))<1e-6){v.at0=rnd4(best==='E'||best==='W'?p[0]:p[1]);delete v.ang;delete v.p0;}
+  else{let t=th%(2*Math.PI);if(t>Math.PI)t-=2*Math.PI;if(t<=-Math.PI)t+=2*Math.PI;v.ang=+t.toFixed(5);v.p0=[rnd4(p[0]),rnd4(p[1])];}}
+{const _vr=vRot;vRot=function(v){return!!(v&&v.kind==='section'&&v.ang!=null&&isFinite(v.ang))||_vr(v);};}
+{const _vc=vCtx;vCtx=function(v){const o=_vc(v);if(v&&v.kind==='section'&&v.ang!=null&&isFinite(v.ang)&&v.p0){const th=+v.ang,[x,z]=v.p0;o.zc=-x*Math.sin(th)+z*Math.cos(th)+0.013;const L=v.look||'N';o.at=L==='E'||L==='W'?x:z;}return o;};}
+clipPlaneOf=function(v){if(!v)return null;if(v.kind==='plan'){if(v.site)return null;const p=planCtx(v);return{h:true,y:p.cut};}
+  if(v.kind==='section'){const o=vCtx(v);if(o.zc==null)return null;return{h:false,th:vTh(v),zc:o.zc-0.013,p0:secP0(v),far:o.far};}return null;};
+clip3dPlanes=function(){try{clipShowSync();const v=S.clip3d?vById(S.clip3d):null;if(!v||!clipList().includes(v))return[];const key=S.clip3d+'|'+clipCheap();if(CLP.key===key)return CLP.planes;CLP.key=key;
+    const q=clipPlaneOf(v),P=[];if(q&&q.h)P.push(new THREE.Plane(new THREE.Vector3(0,-1,0),q.y));
+    else if(q){const s=Math.sin(q.th),c=Math.cos(q.th);P.push(new THREE.Plane(new THREE.Vector3(s,0,-c),q.zc));if(q.far>0)P.push(new THREE.Plane(new THREE.Vector3(-s,0,c),-(q.zc-q.far)));}
+    CLP.planes=P;return P;}catch(e){return[];}};
+// the planes in 3D, and where each one's frame is (for picking it)
+let CLSEL=null;
+function clipRect(q,b){const m=1.5,x0=b.cx-b.w/2-m,x1=b.cx+b.w/2+m,z0=b.cz-b.dz/2-m,z1=b.cz+b.dz/2+m,h=b.h+m;
+  if(q.h)return{pts:[[x0,q.y,z0],[x1,q.y,z0],[x1,q.y,z1],[x0,q.y,z1]],c:[b.cx,q.y,b.cz],n:[0,1,0]};
+  const s=Math.sin(q.th),c=Math.cos(q.th),t=[c,s],L=Math.hypot(b.w,b.dz)/2+m,k=(b.cx-q.p0[0])*t[0]+(b.cz-q.p0[1])*t[1],cx=q.p0[0]+t[0]*k,cz=q.p0[1]+t[1]*k;
+  return{pts:[[cx-t[0]*L,-0.3,cz-t[1]*L],[cx+t[0]*L,-0.3,cz+t[1]*L],[cx+t[0]*L,h,cz+t[1]*L],[cx-t[0]*L,h,cz-t[1]*L]],c:[cx,Math.max(0.5,b.h/2),cz],n:[s,0,-c]};}
+clipShowSync=function(){if(typeof scene==='undefined')return;if(!CLP.g){CLP.g=new THREE.Group();CLP.g.name='clipping planes';scene.add(CLP.g);}
+  if(S.clipShow==='faint')S.clipShow='on';const mode=S.clipShow==='on'?'on':'off';if(CLSEL&&(mode==='off'||!vById(CLSEL)||!clipList().some(v=>v.id===CLSEL)))clipSelect(null,true);
+  const sig=mode+'|'+S.clip3d+'|'+CLSEL+'|'+clipCheap();if(sig===CLP.gsig)return;CLP.gsig=sig;
+  for(const o of CLP.g.children.slice()){CLP.g.remove(o);o.geometry&&o.geometry.dispose();o.material&&o.material.dispose();}CLP.rects=[];
+  if(mode==='off'){clipHandles();return;}const b=bounds();
+  for(const v of clipList()){const q=clipPlaneOf(v);if(!q)continue;const R=clipRect(q,b),pts=R.pts;CLP.rects.push({id:v.id,pts:pts.map(p=>new THREE.Vector3(...p))});
+    const sel=CLSEL===v.id,act=S.clip3d===v.id,col=sel?'#2753b8':act?'#d0662b':'#2f6fd6',g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute([...pts[0],...pts[1],...pts[2],...pts[0],...pts[2],...pts[3]],3));
+    const fm=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:sel?0.16:0.1,side:THREE.DoubleSide,depthWrite:false}));fm.renderOrder=5;fm.userData.clipPlane=v.id;
+    const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(pts.flat(),3));const ln=new THREE.LineLoop(lg,new THREE.LineBasicMaterial({color:col,transparent:true,opacity:sel?1:0.8}));
+    CLP.g.add(fm,ln);}
+  clipHandles();};
+// the handles of the picked plane: a two-way arrow across it, and for a section a ring to turn it. They draw over the model, never cut.
+const CLH=new THREE.Scene();
+function clipHandles(){if(!CLP.hg){CLP.hg=new THREE.Group();CLH.add(CLP.hg);}const G=CLP.hg;
+  for(const o of G.children.slice()){G.remove(o);o.traverse(x=>{x.geometry&&x.geometry.dispose();x.material&&x.material.dispose();});}
+  const v=CLSEL&&vById(CLSEL),q=v&&clipPlaneOf(v);G.visible=!!q;if(!q)return;const R=clipRect(q,bounds());
+  const M=(col,o)=>new THREE.MeshBasicMaterial({color:col,depthTest:false,transparent:true,opacity:o==null?1:o}),hit=new THREE.MeshBasicMaterial({visible:false});
+  const arrow=new THREE.Group();arrow.add(new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,1.5,10),M('#2753b8')));
+  for(const sg of[1,-1]){const cn=new THREE.Mesh(new THREE.ConeGeometry(0.075,0.24,16),M('#2753b8'));cn.position.y=sg*0.86;if(sg<0)cn.rotation.x=Math.PI;arrow.add(cn);}
+  const ap=new THREE.Mesh(new THREE.CylinderGeometry(0.11,0.11,2,8),hit);ap.userData.h='mv';arrow.add(ap);
+  arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(...R.n));G.add(arrow);
+  if(!q.h){const ring=new THREE.Mesh(new THREE.TorusGeometry(0.62,0.018,8,64),M('#2753b8',0.85));ring.rotation.x=Math.PI/2;G.add(ring);
+    const rp=new THREE.Mesh(new THREE.TorusGeometry(0.62,0.075,6,48),hit);rp.rotation.x=Math.PI/2;rp.userData.h='rot';G.add(rp);}
+  const dot=new THREE.Mesh(new THREE.SphereGeometry(0.05,12,8),M('#ffffff'));G.add(dot);
+  G.position.set(...R.c);}
+{const _dv=drawVP;drawVP=function(v,H,th){const r=_dv.apply(this,arguments);
+  try{if(CLP.hg&&CLP.hg.visible&&!planView(v)){CLP.hg.scale.setScalar(vpPx(v,CLP.hg.position)*70);const ac=renderer.autoClear,cp=renderer.clippingPlanes;renderer.autoClear=false;renderer.clippingPlanes=[];renderer.clearDepth();renderer.render(CLH,v.camera);renderer.autoClear=ac;renderer.clippingPlanes=cp;}}catch(e){}return r;};}
+function clipSelect(id,quiet){CLSEL=id&&vById(id)?id:null;CLP.gsig='';if(!quiet){clipShowSync();rdrWake();}
+  const v=CLSEL&&vById(CLSEL);if(v&&!quiet)msg(v.kind==='plan'?`${hx(v.name)}: drag the arrow to move the plane up or down (cut at ${fmtL(planCtx(v).cut)}). Esc or a click elsewhere lets go.`:`${hx(v.name)}: drag the arrow to move the plane across, or the ring to turn it (5° steps, Shift for any angle). Esc or a click elsewhere lets go.`);}
+// picking: a plane is picked on its frame, so clicks on the model inside it still pick the model
+function segPx(px,py,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy;let t=L?((px-a[0])*dx+(py-a[1])*dy)/L:0;t=Math.max(0,Math.min(1,t));return Math.hypot(px-a[0]-dx*t,py-a[1]-dy*t);}
+function clipNear(e){if(S.clipShow!=='on'||!CLP.rects||!CLP.rects.length)return null;const hv=vpAt(e);if(!hv||planView(hv))return null;
+  const r=glc.getBoundingClientRect(),mx=e.clientX-r.left-hv.x,my=e.clientY-r.top-hv.y;let best=null;
+  for(const R of CLP.rects){const P=R.pts.map(p=>{const q=p.clone().project(hv.camera);return[(q.x+1)/2*hv.w,(1-q.y)/2*hv.h,q.z];});if(P.some(p=>p[2]>1||p[2]<-1))continue;
+    for(let i=0;i<4;i++){const d=segPx(mx,my,P[i],P[(i+1)%4]);if(d<7&&(!best||d<best.d))best={id:R.id,d};}}return best&&best.id;}
+function clipHandleAt(e){if(!CLSEL||!CLP.hg||!CLP.hg.visible)return null;const hv=vpAt(e);if(!hv||planView(hv))return null;CLP.hg.scale.setScalar(vpPx(hv,CLP.hg.position)*70);CLP.hg.updateMatrixWorld(true);
+  ray.setFromCamera(ndc(e,hv),hv.camera);const h=ray.intersectObjects(CLP.hg.children,true).find(x=>x.object.userData.h);return h?{h:h.object.userData.h,v:hv}:null;}
+let CPD=null;
+window.addEventListener('pointerdown',e=>{if(e.target!==glc||e.button!==0||(typeof pp!=='undefined'&&pp)||tool!=='select')return;
+  const H=clipHandleAt(e);if(H){const v=vById(CLSEL),hv=H.v,o=CLP.hg.position.clone();ray.setFromCamera(ndc(e,hv),hv.camera);
+    const n=new THREE.Vector3(...clipRect(clipPlaneOf(v),bounds()).n),d={id:v.id,k:H.h,hv,o,a:n,s0:JSON.stringify(v),x0:e.clientX,y0:e.clientY,moved:false};
+    if(H.h==='mv'){d.t0=axisT(ray.ray,o,n);if(d.t0===null)return;}else{const pl=new THREE.Plane(new THREE.Vector3(0,1,0),-o.y),p=new THREE.Vector3();if(!ray.ray.intersectPlane(pl,p))return;d.g0=Math.atan2(p.z-o.z,p.x-o.x);d.th0=vTh(v);}
+    d.cut0=v.cut!=null&&isFinite(v.cut)?+v.cut:1.2;d.p0=v.kind==='section'?secP0(v):null;CPD=d;VPS.forEach(x=>x.controls.enabled=false);e.stopImmediatePropagation();e.preventDefault();return;}
+  const id=clipNear(e);if(id){clipSelect(id);e.stopImmediatePropagation();e.preventDefault();return;}
+  if(CLSEL)clipSelect(null);},true);
+window.addEventListener('pointermove',e=>{const d=CPD;if(!d){if(e.target===glc&&!e.buttons&&(CLSEL||S.clipShow==='on')){const h=clipHandleAt(e)||clipNear(e);if(h)glc.style.cursor=h.h==='rot'?'grab':'pointer';}return;}
+  if(!d.moved&&Math.hypot(e.clientX-d.x0,e.clientY-d.y0)<4)return;if(!d.moved){d.moved=true;snap();}
+  const v=vById(d.id);if(!v)return;ray.setFromCamera(ndc(e,d.hv),d.hv.camera);const gr=D.grid||0.01,sn=x=>Math.round(x/gr)*gr;let txt='';
+  if(d.k==='mv'){const t=axisT(ray.ray,d.o,d.a);if(t===null)return;const dl=sn(t-d.t0);
+    if(v.kind==='plan'){v.cut=rnd4(d.cut0+dl);txt=`Cut at ${fmtL(planCtx(v).cut)}`;}else{secSet(v,vTh(v),[d.p0[0]+d.a.x*dl,d.p0[1]+d.a.z*dl]);txt=`Moved ${fmtL(dl)}`;}}
+  else{const pl=new THREE.Plane(new THREE.Vector3(0,1,0),-d.o.y),p=new THREE.Vector3();if(!ray.ray.intersectPlane(pl,p))return;let th=d.th0+angD(Math.atan2(p.z-d.o.z,p.x-d.o.x),d.g0);
+    if(!e.shiftKey){const st=Math.PI/36;th=Math.round(th/st)*st;}secSet(v,th,[d.o.x,d.o.z]);txt=`Turned ${Math.round(angD(th,d.th0)*180/Math.PI)}°`;}
+  v.placed=true;CLP.key='';CLP.gsig='';clipShowSync();rdrWake();const r=vp.getBoundingClientRect();tip.hidden=false;tip.style.left=(e.clientX-r.left)+'px';tip.style.top=(e.clientY-r.top)+'px';tip.textContent=txt;},true);
+window.addEventListener('pointerup',()=>{const d=CPD;if(!d)return;CPD=null;tip.hidden=true;if(!d.moved)return;const v=vById(d.id);save();refresh();
+  if(v)msg(v.kind==='plan'?`${hx(v.name)} now cuts at ${fmtL(planCtx(v).cut)}. Its drawing follows.`:`${hx(v.name)} moved${v.ang!=null?`, turned to ${Math.round(((v.ang*180/Math.PI)%360+360)%360)}° from north`:''}. Its drawing follows.`);},true);
+window.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(CPD){const v=vById(CPD.id);if(v&&CPD.moved){hist.pop();for(const k of Object.keys(v))delete v[k];Object.assign(v,JSON.parse(CPD.s0));}CPD=null;tip.hidden=true;CLP.key='';CLP.gsig='';clipShowSync();rdrWake();e.stopImmediatePropagation();return;}
+  if(CLSEL&&!(e.target&&e.target.closest&&e.target.closest('input,textarea,select'))){clipSelect(null);rdrWake();}},true);
+// the bar above the view: only planes that were set, and one button that shows or hides them
+{const ss=$('#clipShowSel');if(ss){const lb=ss.closest('label');const b=document.createElement('button');b.type='button';b.id='clipShowBtn';b.className='ghost cpbtn';
+  b.innerHTML='<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M3 9l9-5 9 5-9 5z"/><path d="M3 15l9 5 9-5" opacity=".55"/></svg><span></span>';
+  (lb||ss).after(b);if(lb)lb.hidden=true;else ss.hidden=true;b.addEventListener('click',()=>clipShowSet(S.clipShow==='on'?'off':'on'));}}
+clipUI=function(){const sel=$('#clipSel'),b=$('#clipShowBtn');if(!sel)return;if(S.clipShow==='faint')S.clipShow='on';const N=CLPN[S.keymap]||CLPN.rhino,list=clipList();
+  if(S.clip3d&&!list.some(v=>v.id===S.clip3d)){S.clip3d=null;CLP.key='';}
+  const sig=JSON.stringify([S.keymap,list.map(v=>[v.id,v.name]),S.clip3d,S.clipShow]);if(sig===clipSig)return;clipSig=sig;
+  $('#clipLbl').textContent=N[0];sel.innerHTML=`<option value="">Off</option>`+(list.length?list.map(v=>`<option value="${hx(v.id)}">${hx(v.name)}</option>`).join(''):`<option disabled>No plans or sections set yet</option>`);
+  sel.value=S.clip3d||'';sel.title=list.length?'Cut the 3D views with the plane of one plan or section':'Set the floors in Ready for drawings (Make plans at these levels) or add a plan or section first';
+  if(b){const on=S.clipShow==='on';b.querySelector('span').textContent=`${N[1]}: ${on?'Shown':'Hidden'}`;b.setAttribute('aria-pressed',String(on));b.title=on?'Hide the planes of every plan and section in 3D':'Show the plane of every plan and section in 3D, to pick and move them';}};
+clipShowSet=function(m){S.clipShow=m==='on'||m==='faint'?'on':'off';clipSig='';CLP.gsig='';clipUI();clipShowSync();save();rdrWake();const N=CLPN[S.keymap]||CLPN.rhino;
+  msg(S.clipShow==='on'?`${N[1]} shown in 3D. Click a plane's frame to move it.`:`${N[1]} hidden in 3D.`);};
+{const _r=run;run=function(raw){const q=/^(clipplanes|showplanes|sectionplanes|displaysectionplanes|planes)\b\s*(off|faint|on|hide|show)?\s*$/i.exec(String(raw||'').trim());
+  if(q){cmdIn.value='';const a=(q[2]||'').toLowerCase();clipShowSet(a?(a==='off'||a==='hide'?'off':'on'):S.clipShow==='on'?'off':'on');return;}return _r.apply(this,arguments);};}
+
+// Ready for drawings: the levels found can be corrected. Click a height to type the floor where it really is, × drops a level
+// that isn't one, and + adds a level the check missed. Each level set becomes a plan (its clipping plane), cut 1.2 m above it.
+function frLvs(){return Array.isArray(S.frLv)?S.frLv:FR.lv.map(l=>({y:l.y,a:l.a}));}
+function frPlanOf(y){const bld=!!(S.pts&&S.pts.length);return vOf('plan').find(v=>!v.site&&(bld||v.placed||!CPSTOCK.has(v.id))&&(v.fl!=null?Math.abs(v.fl-y)<0.005:!(+v.lv)&&Math.abs((+v.cut||0)-(y+1.2))<0.05));}
+function frKeep(L){S.frLv=L.map(l=>({y:rnd4(l.y),a:l.a!=null?l.a:null})).sort((a,b)=>a.y-b.y);}
+let FRED=null;
+function frLvRender(){const c=$('#frCard');if(!c||c.hidden)return;const h5=[...c.querySelectorAll('.frsec h5')].find(h=>/^Levels found$/i.test(h.textContent.trim()));if(!h5)return;const sec=h5.parentElement;
+  const L=frLvs(),fmt=y=>(y>=0?'+':'')+fmtL(y);
+  sec.innerHTML=`<h5>Levels found</h5>${L.length?'':'<p class="note" style="margin:0">No levels. Add one where a floor is.</p>'}`+L.map((l,i)=>{const p=frPlanOf(l.y);
+    return`<div class="frrow frlv"><input type="checkbox" data-fl="${i}" ${p?'disabled':'checked'} aria-label="Make a plan at this level">${FRED===i?`<input class="frin" data-in="${i}" value="${hx(fmtN(l.y,'input'))}" aria-label="Height of this level">`:`<button type="button" class="frht" data-ed="${i}" title="Click to change where this floor is">${hx(fmt(l.y))}</button>`}<em>${p?hx(p.name):l.a!=null?fmtA(l.a)+' of flat surface':'added by you'}</em><button type="button" class="frx" data-x="${i}" title="${p?'Remove this level and its plan':'Not a floor: remove it'}" aria-label="Remove this level">×</button></div>`;}).join('')+
+    `<div class="frbtn"><button type="button" class="ghost" id="frAdd">+ Add a level</button><button type="button" class="ghost" id="frPlans2">Make plans at these levels</button></div>`;
+  sec.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>{FRED=+b.dataset.ed;frLvRender();});
+  const inp=sec.querySelector('[data-in]');if(inp){inp.focus();inp.select();let done=false;
+    const commit=ok=>{if(done)return;done=true;const i=+inp.dataset.in;FRED=null;if(!ok){frLvRender();return;}const n=parseNums(inp.value);if(!n){msg('Type a height, like 10\' 6" or 3.2.');frLvRender();return;}
+      const y=n[0]*UF(),L2=frLvs().map(l=>({...l})),old=L2[i];if(!old){frLvRender();return;}const p=frPlanOf(old.y);snap();
+      if(p){const dy=y-old.y;p.fl=rnd4(y);p.low=rnd4(y);p.cut=rnd4((p.cut!=null?+p.cut:1.2)+dy);p.placed=true;}
+      old.y=y;frKeep(L2);save();refresh();msg(`Level set at ${fmt(y)}${p?`; ${hx(p.name)} moved with it`:''}.`);};
+    inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit(true);}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();commit(false);}};inp.onblur=()=>commit(true);}
+  sec.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{const i=+b.dataset.x,L2=frLvs().map(l=>({...l})),l=L2[i];if(!l)return;const p=frPlanOf(l.y);snap();
+    if(p){if(p.id==='plan'){delete p.fl;}else{S.views=S.views.filter(v=>v!==p);if(S.clip3d===p.id)S.clip3d=null;if(CLSEL===p.id)CLSEL=null;viewsInit();}}
+    L2.splice(i,1);frKeep(L2);save();refresh();msg(`Level ${fmt(l.y)} removed${p&&p.id!=='plan'?` with ${hx(p.name)}`:''}. Undo brings it back.`);});
+  $('#frAdd').onclick=()=>{const L2=frLvs().map(l=>({...l})),top=L2.length?Math.max(...L2.map(l=>l.y)):0;L2.push({y:L2.length?top+3:0,a:null});frKeep(L2);FRED=S.frLv.length-1;save();frLvRender();};
+  $('#frPlans2').onclick=()=>{const L2=frLvs(),ys=[...sec.querySelectorAll('[data-fl]:checked:not(:disabled)')].map(x=>L2[+x.dataset.fl]).filter(Boolean).map(l=>l.y);if(!ys.length){msg('Tick at least one level without a plan.');return;}
+    snap();frKeep(L2);const all=S.frLv.map(l=>l.y);let k=0;
+    for(const y of ys){const n=all.findIndex(a=>Math.abs(a-y)<1e-4)+1;S.views.push({id:vNewId(),kind:'plan',name:vFree(`Level ${n} plan`),cut:rnd4(y+1.2),low:rnd4(y),fl:rnd4(y),stype:'pres',placed:true});k++;}
+    S.clipShow='on';viewsInit();if(typeof vSig!=='undefined')vSig='';clipSig='';save();refresh();
+    msg(`${plural(k,'plan')} added, each cut 1.2 m above its floor. Each is a clipping plane now: pick one in the Clipping plane list, or click its frame in 3D to move it.`);};}
+{const _fs=frScan;frScan=function(){const r=_fs.apply(this,arguments);if(Array.isArray(S.frLv))for(const l of S.frLv){const m=FR.lv.find(x=>Math.abs(x.y-l.y)<0.01);if(m&&l.a==null)l.a=m.a;}return r;};}
+{const _fr=frRender;frRender=function(){const r=_fr.apply(this,arguments);try{frLvRender();}catch(e){console.error(e);}return r;};}
+try{clipSig='';clipUI();clipShowSync();}catch(e){}
+{const _cs=clipSet;clipSet=function(){const r=_cs.apply(this,arguments);CLP.gsig='';rdrWake();return r;};}
 </script>
 
 </html>
