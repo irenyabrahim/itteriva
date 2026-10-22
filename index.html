@@ -12467,6 +12467,60 @@ obb=function(P){const H=hull(P);if(H.length<3)return null;let best=null;for(let 
     const A=(s1-s0)*(t1-t0);if(!best||A<best.A-1e-9)best={A,u,n,s0,s1,t0,t1};}
   if(!best)return null;let{u,n,s0,s1,t0,t1}=best;if(t1-t0>s1-s0){const u0=u;u=n;n=[-u0[0],-u0[1]];[s0,s1,t0,t1]=[t0,t1,-s1,-s0];}
   const tm=(t0+t1)/2,a=[u[0]*s0+n[0]*tm,u[1]*s0+n[1]*tm],b=[u[0]*s1+n[0]*tm,u[1]*s1+n[1]*tm];return{len:s1-s0,wid:t1-t0,a,b};};
+
+/* st14 (Ireny 2026-10-22): sketching in Front, Back, Right or Left aimed at the ground plane, which those views look along, so
+   the point landed absurdly far away. Until curves can lie on upright planes, those views say so instead of placing anything. */
+let SIDEWARN=0;
+{const _ga=groundAt;groundAt=function(ev,shift){const hv=vpAt(ev);if(hv&&['front','back','left','right'].includes(hv.view)){
+    if(Date.now()-SIDEWARN>4000){SIDEWARN=Date.now();const k={rhino:'Top or Perspective',revit:'a floor plan or {3D}',sketchup:'Top or Iso',autocad:'Top or SE Isometric'}[S.keymap]||'Top or Perspective';
+      msg(`Lines can't be drawn in ${vname(hv.view)} yet: curves lie flat on the ground or a level for now. Draw in ${k}; drawing on upright planes (like Rhino's Front construction plane) is next.`);}
+    try{tip.hidden=true;}catch(e){}return null;}return _ga.apply(this,arguments);};}
+/* st14 (Ireny 2026-10-22): Add level did nothing in an imported model: the Levels card only worked on a building made here.
+   Without one, the card now holds the floor levels the model is read at (the same list as Ready for drawings): + Add level puts
+   a level 3 m above the top one with its plan (clipping plane), the elevation can be typed, the name renames the plan, × removes it. */
+function lvFreeInit(){if(!Array.isArray(S.frLv)&&!(FR.lv&&FR.lv.length)&&(S.solids||[]).some(o=>!o.hidden&&o.kind!=='curve')){try{frScan();}catch(e){}}if(!Array.isArray(S.frLv))frKeep(frLvs());}
+function lvFreePlan(y){const n=S.frLv.findIndex(l=>Math.abs(l.y-y)<1e-4)+1;const v={id:vNewId(),kind:'plan',name:vFree(`Level ${n} plan`),cut:rnd4(y+1.2),low:rnd4(y),fl:rnd4(y),stype:'pres',placed:true};S.views.push(v);return v;}
+function lvFreeDone(m){viewsInit();if(typeof vSig!=='undefined')vSig='';clipSig='';save();refresh();try{frLvRender();}catch(e){}rdrWake();if(m)msg(m);}
+{const _al=addLevel;addLevel=function(h){if(S.pts)return _al.apply(this,arguments);lvFreeInit();snap();const L=S.frLv,top=L.length?Math.max(...L.map(l=>l.y)):null,y=rnd4(top==null?0:top+(h||3));
+  L.push({y,a:null});frKeep(L);const v=lvFreePlan(y);S.clipShow='on';
+  lvFreeDone(`Level added at ${(y>=0?'+':'')+fmtL(y)} with ${v.name}, cut 1.2 m above it. Type a different elevation in the Levels list if the floor is elsewhere.`);return true;};}
+{const _rl=renderLevels;renderLevels=function(){if(S.pts)return _rl.apply(this,arguments);const box=$('#lvList');if(!box)return;const N=LVN[S.keymap]||LVN.rhino;
+  $('#lvTitle').textContent=N.t;$('#lvAdd').textContent=N.add;$('#lvAdd').disabled=false;const L=frLvs();
+  $('#lvNote').textContent=L.length?'Floors of your model. Each with a plan is a clipping plane.':'No levels yet. Add one where a floor is.';$('#lvCount').textContent=L.length?String(L.length):'';box.innerHTML='';
+  L.forEach((l,k)=>{const p=frPlanOf(l.y),r=document.createElement('div');r.className='lvrow';r.setAttribute('role','listitem');
+    const nm=document.createElement('input');nm.value=p?p.name.replace(/ plan$/,''):`Level ${k+1}`;nm.maxLength=24;nm.disabled=!p;nm.title=p?'Name of this level and its plan':'Make its plan to name it';nm.setAttribute('aria-label',`Level ${k+1} name`);
+    nm.onchange=()=>{const v=nm.value.trim().slice(0,24);if(!v||!p){renderLevels();return;}snap();p.name=vFree(`${v} plan`);lvFreeDone();};
+    const hi=document.createElement('input');hi.inputMode='decimal';hi.value=fmtN(l.y,'input');hi.title='Elevation of this floor';hi.setAttribute('aria-label',`Level ${k+1} elevation`);
+    hi.onchange=()=>{const n=parseNums(hi.value);if(!n){hi.value=fmtN(l.y,'input');msg('Type an elevation, like 10\' 6" or 3.2.');return;}const y=rnd4(n[0]*UF());snap();
+      if(p){const dy=y-l.y;p.fl=y;p.low=y;p.cut=rnd4((p.cut!=null?+p.cut:1.2)+dy);p.placed=true;}const L2=frLvs().map(x=>({...x}));L2[k].y=y;frKeep(L2);
+      lvFreeDone(`Level ${k+1} set at ${(y>=0?'+':'')+fmtL(y)}${p?`; ${p.name} moved with it`:''}.`);};
+    const el=document.createElement(p?'span':'button');el.className=p?'el':'ghost';
+    if(p){el.textContent='plan ✓';el.title=p.name;}else{el.type='button';el.textContent='+ plan';el.title='Make a plan (clipping plane) at this level';el.onclick=()=>{snap();lvEnsurePlan(l.y);};}
+    const x=document.createElement('button');x.className='ghost';x.type='button';x.textContent='×';x.title=p?'Remove this level and its plan':'Remove this level';x.setAttribute('aria-label',`Remove level ${k+1}`);
+    x.onclick=()=>{snap();if(p){if(p.id==='plan')delete p.fl;else{S.views=S.views.filter(v=>v!==p);if(S.clip3d===p.id)S.clip3d=null;if(CLSEL===p.id)CLSEL=null;}}
+      const L2=frLvs().map(x=>({...x}));L2.splice(k,1);frKeep(L2);lvFreeDone(`Level ${k+1} removed${p&&p.id!=='plan'?` with ${p.name}`:''}. Undo brings it back.`);};
+    r.append(nm,hi,el,x);box.appendChild(r);});};}
+function lvEnsurePlan(y){if(!Array.isArray(S.frLv))frKeep(frLvs());const v=lvFreePlan(y);S.clipShow='on';lvFreeDone(`${v.name} made, cut 1.2 m above its floor.`);}
+// the Ready for drawings list and the Levels card are the same levels: either one redraws the other
+{const _fl=frLvRender;frLvRender=function(){const r=_fl.apply(this,arguments);try{if(!S.pts&&!LVR){LVR=1;renderLevels();}}catch(e){}finally{LVR=0;}return r;};}
+var LVR=0;
+
+// Undo and Redo bring back the model's floor levels too (S.frLv is not part of the snapshot, so each step carries a copy)
+const LVJ=()=>JSON.stringify(Array.isArray(S.frLv)?S.frLv:null);
+{const _hp=hist.push;hist.push=function(...a){for(const e of a)if(e&&typeof e==='object')e.flv=LVJ();return _hp.apply(this,a);};}
+function lvBack(h){if(!h||h.flv===undefined)return;const v=JSON.parse(h.flv);if(v)S.frLv=v;else delete S.frLv;try{renderLevels();frLvRender();}catch(e){}save();}
+{const _u=undo;undo=function(){const h=hist[hist.length-1],cur=LVJ();const r=_u.apply(this,arguments);const t=redoStack[redoStack.length-1];if(h&&t)t.flv=cur;lvBack(h);return r;};}
+{const _r=redo;redo=function(){const h=redoStack[redoStack.length-1];const r=_r.apply(this,arguments);lvBack(h);return r;};}
+
+/* st14: lines sketched in a side view before this fix landed absurdly far away (10^17 ft), which stretched everything framed to the
+   model: clipping plane frames, Zoom Extents, sheets. Any curve with a point more than 100 km out is removed once, on start-up. */
+function farJunk(){const far=p=>Array.isArray(p)&&p.some(n=>typeof n==='number'&&(!isFinite(n)||Math.abs(n)>1e5));
+  const bad=S.solids.filter(o=>o.kind==='curve'&&(far(o.pos)||(o.pts||o.P||[]).some(far)));if(!bad.length)return 0;
+  const ids=new Set(bad.map(o=>o.id));S.solids=S.solids.filter(o=>!ids.has(o.id));if(Array.isArray(S.sel))S.sel=S.sel.filter(id=>!ids.has(id));
+  save();try{CLP.gsig='';CLP.key='';}catch(e){}refresh();try{rdrWake();}catch(e){}
+  msg(`Removed ${plural(bad.length,'line')} drawn in a side view that landed far off the model, which stretched the clipping planes and zoom.`);return bad.length;}
+try{farJunk();}catch(e){console.error(e);}
+
 </script>
 
 </html>
