@@ -2274,13 +2274,20 @@ const DEFAULT={pts:[[-6,-5],[6,-5],[6,1],[0,1],[0,5],[-6,5]],height:3.2,built:tr
   layers:clone(PRESETS[0].layers),floorLayers:clone(FPRESETS[0].layers),fpreset:0,roofLayers:clone(RPRESETS[0].layers),rpreset:0,room:'Studio',solids:[],sel:null,winType:'punched',winSize:{w:1.2,sill:0.9,head:2.1},doorType:'single',doorSize:{w:0.9,head:2.1},doorHand:0,doorSwing:'in',keymap:'revit',style:'render',sun:15,example:true,
   windows:[{e:0,s:3.4,t:'ribbon'},{e:0,s:8.6,t:'punched'},{e:1,s:3,t:'storefront'},{e:2,s:2.6,t:'punched'},{e:4,s:3,t:'tall'},{e:5,s:6.2,t:'punched'},{e:5,s:2.6,t:'punched'},{e:2,s:4.6,t:'single',hand:0,swing:'in'}]};
 /* Safe start (2026-10-22): ?safe in the address, or a start that never finished last time (the tab crashed or froze while
-   loading), opens without the saved model. Nothing is deleted: the project stays under Projects and the last state is kept in s2b-state-safe. */
+   loading), opens without the saved model. Nothing is deleted: the project stays under Projects and the last state is kept in
+   s2b-state-safe. The person's own settings (program, units, display) are kept; only the model and its drawings are left out. */
+var SAFEK=['olayers','curLayer','solids','sel','more','pts','height','built','layers','preset','floorLayers','fpreset','roofLayers','rpreset','windows','room','example','ent','dEdits','sheetUL','views','roomNames','wallAsm','levels','cams','prog','dopt','sheetStyle','sheetLayers','vcur','boards','sheetDef','pubs','dopts','revBase','revOn','clip3d'];
 var SAFE=(()=>{try{const q=/[?&#]safe\b/i.test(location.search+location.hash),n=+(localStorage.getItem('s2b-boot')||0);
   localStorage.setItem('s2b-boot',String(n+1));if(!q&&n<1)return null;
   const st=localStorage.getItem('s2b-state');if(st)try{localStorage.setItem('s2b-state-safe',st);}catch(e){}
-  localStorage.removeItem('s2b-state');localStorage.removeItem('s2b-cur');return q?'link':'auto';}catch(e){return null;}})();
+  try{const v=JSON.parse(st||'null');if(v&&v.layers){const D0=clone(DEFAULT);for(const k of SAFEK)if(D0[k]!==undefined)v[k]=D0[k];else delete v[k];
+    localStorage.setItem('s2b-state',JSON.stringify(v));}else localStorage.removeItem('s2b-state');}catch(e){localStorage.removeItem('s2b-state');}
+  localStorage.removeItem('s2b-cur');return q?'link':'auto';}catch(e){return null;}})();
 let S=clone(DEFAULT);
 try{const v=JSON.parse(localStorage.getItem('s2b-state')||'null'); if(v&&v.layers) S=Object.assign(clone(DEFAULT),v); else{S.pts=null;S.built=false;S.example=false;S.windows=[];}}catch(e){}
+// an earlier safe start (st7) dropped the person's settings too; bring them back once from the copy it kept
+try{if(!localStorage.getItem('s2b-safefix')){localStorage.setItem('s2b-safefix','1');const o=JSON.parse(localStorage.getItem('s2b-state-safe')||'null');
+  if(o&&!SAFE)for(const k in o)if(!SAFEK.includes(k))S[k]=o[k];}}catch(e){}
 const save=()=>{try{localStorage.setItem('s2b-state',JSON.stringify(S));}catch(e){}if(typeof projTouch==='function')projTouch();};
 let hist=[];
 let redoStack=[];
@@ -11918,7 +11925,9 @@ function mpjBatch(opt){if(opt==null||typeof opt!=='object')opt={hi:opt};const ki
   // pieces of one straight line (a grid of panels, a long edge split into triangles) joined, so a dense facade stays light to draw
   for(const P of per.values()){P.lines=mpjMerge(P.lines,px*0.5);P.folds=mpjMerge(P.folds,px*0.5);}
   // each object's visible faces as a small image, so drawing order with the rest of the drawing still works
-  shapes.forEach((o,k)=>{let i0=W,i1=-1,j0=H,j1=-1;for(let j=0;j<H;j++){const row=j*W;for(let i=0;i<W;i++)if(ID[row+i]===k){if(i<i0)i0=i;if(i>i1)i1=i;if(j<j0)j0=j;if(j>j1)j1=j;}}
+  const BB=new Int32Array(shapes.length*4);for(let k=0;k<shapes.length;k++){BB[4*k]=W;BB[4*k+1]=-1;BB[4*k+2]=H;BB[4*k+3]=-1;}
+  for(let j=0;j<H;j++){const row=j*W;for(let i=0;i<W;i++){const k=ID[row+i];if(k<0||k>=shapes.length)continue;const q=4*k;if(i<BB[q])BB[q]=i;if(i>BB[q+1])BB[q+1]=i;if(j<BB[q+2])BB[q+2]=j;if(j>BB[q+3])BB[q+3]=j;}}
+  shapes.forEach((o,k)=>{const i0=BB[4*k],i1=BB[4*k+1],j0=BB[4*k+2],j1=BB[4*k+3];
     if(i1<0)return;const cw=i1-i0+1,ch=j1-j0+1,cv=document.createElement('canvas');cv.width=cw;cv.height=ch;const cx=cv.getContext('2d'),im=cx.createImageData(cw,ch);
     for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++)if(ID[j*W+i]===k){const p=4*((j1-j)*cw+(i-i0));im.data[p]=im.data[p+1]=im.data[p+2]=255;im.data[p+3]=255;}
     cx.putImageData(im,0,0);const P=per.get(o.s.id);P.img=cv;P.ib=[X0+i0*px,Y0+j0*px,X0+(i1+1)*px,Y0+(j1+1)*px];});
@@ -12182,7 +12191,7 @@ PRF.pstrip=true;try{prfSave();}catch(e){}
 stripMode=function(){PRF.pstrip=true;prfSave();stripSig='';stripApply();try{dockApply();}catch(e){}refresh();msg('Panels open from the icons on the far right. Click one to open it; Shift+click adds a second one under it.');};
 try{stripSig='';stripApply();dockApply();}catch(e){console.error(e);}
 
-/* Safe start: the start finished, so the next one loads the saved model again */
+/* Safe start: once the model is loaded and drawn, the next start loads it again */
 function bootOk(){try{if((S.solids||[]).some(s=>s.kind==='mesh'&&!GEO.has(s.geo)))return setTimeout(bootOk,2000);}catch(e){}
   requestAnimationFrame(()=>setTimeout(()=>{try{localStorage.setItem('s2b-boot','0');}catch(e){}},1500));}
 setTimeout(bootOk,6000);
@@ -12224,6 +12233,21 @@ function mpjEdgesFast(g){const P=g.attributes.position;if(!P||P.isInterleavedBuf
     if(r>=0&&fn[3*s]*fn[3*r]+fn[3*s+1]*fn[3*r+1]+fn[3*s+2]*fn[3*r+2]>cs)continue;
     const p=ed[o],q=ed[o+1];L.push(wp[3*p],wp[3*p+1],wp[3*p+2],wp[3*q],wp[3*q+1],wp[3*q+2]);}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(L,3));T.edges=g;return g;};}
+
+/* Models made of thousands of objects (2026-10-22): every imported object in a drawing asked for the whole drawing's list of
+   shapes and its mesh render again, so a 3,000-object model did that 3,000 times per drawing and froze start-up for minutes.
+   Within one pass of drawing (one task) the list, the render and the layer look-ups are now worked out once per drawing. */
+var PSQ=[],MBQ=[],LOQ=new Map(),PSQt=false;
+function psqClear(){PSQ=[];MBQ=[];LOQ.clear();}
+function psqTick(){if(PSQt)return;PSQt=true;Promise.resolve().then(()=>{PSQt=false;psqClear();});}
+{const _ps=projShapes;projShapes=function(){psqTick();const far=VCTX&&VCTX.far,zc=VCTX&&VCTX.zc;
+  for(const e of PSQ)if(e[0]===VHIDE&&e[1]===VCTX&&e[2]===far&&e[3]===zc&&e[4]===S.solids&&e[5]===S.solids.length)return e[6].slice();
+  const out=_ps.apply(this,arguments);PSQ.push([VHIDE,VCTX,far,zc,S.solids,S.solids.length,out]);return out.slice();};}
+{const _mb=mpjBatch;mpjBatch=function(opt){psqTick();const o=opt!=null&&typeof opt==='object'?opt:{hi:opt},kd=o.kind||'elev';
+  const k=[kd,o.hi,o.lo,o.cut!==false,kd==='elev'?(VROT||0):0,VCTX&&VCTX.far,VCTX&&VCTX.zc,S.solids.length].join('|');
+  for(const e of MBQ)if(e[0]===VHIDE&&e[1]===VCTX&&e[2]===k)return e[3];const b=_mb.apply(this,arguments);MBQ.push([VHIDE,VCTX,k,b]);return b;};}
+{const _lo=layerOn;layerOn=function(id){psqTick();let r=LOQ.get(id);if(r===undefined){r=_lo.apply(this,arguments);LOQ.set(id,r);}return r;};}
+{const _rf=refresh;refresh=function(){psqClear();return _rf.apply(this,arguments);};}
 </script>
 
 </html>
