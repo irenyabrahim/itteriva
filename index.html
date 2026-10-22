@@ -13100,7 +13100,7 @@ button.primary:disabled,#flvCard button.primary:disabled,#dwRev button.primary:d
    opens the views / display mode menu (and clicking the active title opens it too). */
 let lvAdoptSig='';
 function lvAdopt(force){if(!lvFree())return[];const L=flvLevels().filter(l=>!l.roof);if(!L.length)return[];
-  const un=(S.views||[]).filter(v=>v.kind==='plan'&&!v.lvId&&!v.site&&!/site/i.test(v.name||''));if(!un.length)return[];
+  const un=(S.views||[]).filter(v=>v.kind==='plan'&&!v.lvId&&!v.site&&!v.diag&&!/site/i.test(v.name||''));if(!un.length)return[];
   const sig=JSON.stringify([L.map(l=>[l.id,l.y]),un.map(v=>[v.id,v.cut,v.low]),S.solids.length]);if(!force&&sig===lvAdoptSig)return[];lvAdoptSig=sig;
   const done=[];for(const v of un){let d;try{d=psDiag(v);}catch(e){continue;}if(d.n||!/^(cutLow|cutHigh|range)$/.test(d.cause||''))continue;
     const l=L.find(x=>!lvPlans(x.id).length)||L[0];v.lvId=l.id;v.cutOff=CUTDEF();delete v.lowOff;delete v.topOff;delete v.lvReview;v.lvAdopt=1;PS.thumbs&&PS.thumbs.delete(v.id);done.push([v,l]);}
@@ -13121,6 +13121,178 @@ function lvAdopt(force){if(!lvFree())return[];const L=flvLevels().filter(l=>!l.r
       if(wasOn&&e.detail===1)t=setTimeout(()=>{const nb=[...labelBox.querySelectorAll('.vplabel')][on.indexOf(v)];if(nb)axoOpen(nb,v,true);},260);},true);
     b.addEventListener('dblclick',()=>{clearTimeout(t);try{axoClose();}catch(x){}},true);});}catch(e){}return r;};}
 try{labelVPs();}catch(e){}
+
+/* st21 (Ireny 2026-10-22): diagram sheets. A diagram is a drawing of the model with no cut: seen from above (any part of the Top view,
+   picked as a box), from a corner (isometric), from a side, or from the current 3D view, drawn like Make2D (visible lines only,
+   hidden lines optional, dashed) with optional flat colour fills by layer. It is a plan-kind view with v.diag, so it gets sheets,
+   scale, paper, Draw mode, Make2D and drawing frames like any other drawing; it keeps following the model.
+   v.diag = {view:'top'|'sw'|'se'|'ne'|'nw'|'s'|'n'|'e'|'w'|'cam', d:[x,y,z] and up:[x,y,z] for 'cam', st:'lines'|'fill', hid:0|1, area:null|{x0,z0,x1,z1}} */
+const DZV=[['top','Top view, from above'],['sw','Isometric from the south-west'],['se','Isometric from the south-east'],['ne','Isometric from the north-east'],['nw','Isometric from the north-west'],
+  ['s','South side, looking north'],['e','East side, looking west'],['n','North side, looking south'],['w','West side, looking east'],['cam','The current 3D view (parallel)']];
+const DZS=[['lines','Lines only, like Make2D'],['fill','Lines and colour by layer'],['tone','Lines and grey tones']];
+function dzOf(v){return v&&v.kind==='plan'&&v.diag?v.diag:null;}
+function dzDir(D){const s=Math.SQRT1_2,M={top:[[0,-1,0],[0,0,-1]],sw:[[1,-1,-1],[0,1,0]],se:[[-1,-1,-1],[0,1,0]],ne:[[-1,-1,1],[0,1,0]],nw:[[1,-1,1],[0,1,0]],
+  s:[[0,0,-1],[0,1,0]],n:[[0,0,1],[0,1,0]],e:[[-1,0,0],[0,1,0]],w:[[1,0,0],[0,1,0]]};
+  if(D.view==='cam'&&Array.isArray(D.d))return[D.d,Array.isArray(D.up)?D.up:[0,1,0]];return M[D.view]||M.top;}
+// world to drawing: x to the right, y up the sheet, z toward the viewer
+function dzMatrix(D){const[d,u]=dzDir(D),dir=new THREE.Vector3(...d).normalize(),up=new THREE.Vector3(...u);if(Math.abs(dir.dot(up.clone().normalize()))>0.999)up.set(0,0,-1);
+  const m=new THREE.Matrix4().lookAt(new THREE.Vector3(0,0,0),dir,up);return m.transpose();}
+function dzColor(o){const s=o.userData.solid?S.solids.find(x=>x.id===o.userData.solid):null;let c=s&&s.col;if(!c){const l=OL(s?objLayer(s):o.userData.layer);c=l&&l.color;}return c||'#c9cdd2';}
+// the meshes a diagram sees: solids that are shown in this drawing, and the parts of a building made here
+function dzItems(){const out=[];for(const o of world.children){if(!o.visible||o.userData.planSym)continue;let s=null;
+    if(o.userData.solid){s=S.solids.find(x=>x.id===o.userData.solid);if(!s||s.img||s.txt||s.dim||objHidden(s))continue;}else if(o.userData.layer&&(!layerOn(o.userData.layer)||(VCTX&&Array.isArray(VCTX.hl)&&VCTX.hl.includes(o.userData.layer))))continue;else if(!o.userData.layer)continue;
+    o.updateMatrixWorld(true);const col=dzColor(o);o.traverse(m=>{if(m.isMesh&&m.visible!==false&&m.geometry&&m.geometry.attributes&&m.geometry.attributes.position&&!(m.material&&m.material.transparent&&m.material.opacity<0.2))out.push({m,col,id:s?s.id:'b:'+(o.userData.layer||'')});});}
+  return out;}
+const DZC=new Map();
+function dzSig(D){return JSON.stringify([D,VCTX&&VCTX.hl,VCTX&&VCTX.scope,VCTX&&VCTX.near,world.children.length,typeof GCgen!=='undefined'?GCgen:0,S.solids.map(s=>[s.id,s.pos,s.rot,s.sc,s.hidden,s.layer,s.col]),(S.olayers||[]).map(l=>[l.id,l.on,l.color]),S.pts,S.height]);}
+function dzBatch(D){const sig=dzSig(D);if(DZC.has(sig))return DZC.get(sig);const r=mpjGL();if(!r)return null;const R=dzMatrix(D),items=dzItems();if(!items.length)return null;
+  const A=D.area,planes=[];if(A){const P=[[1,0,0,-A.x0],[-1,0,0,A.x1],[0,0,1,-A.z0],[0,0,-1,A.z1]];for(const p of P)planes.push(new THREE.Plane(new THREE.Vector3(p[0],p[1],p[2]),p[3]).applyMatrix4(R));}
+  const box=new THREE.Box3(),tmp=new THREE.Box3(),wb=new THREE.Box3(),its=[];
+  for(const it of items){const g=it.m.geometry;if(!g.boundingBox)g.computeBoundingBox();if(A){wb.copy(g.boundingBox).applyMatrix4(it.m.matrixWorld);if(wb.max.x<A.x0||wb.min.x>A.x1||wb.max.z<A.z0||wb.min.z>A.z1)continue;}
+    const M=new THREE.Matrix4().multiplyMatrices(R,it.m.matrixWorld);tmp.copy(g.boundingBox).applyMatrix4(M);box.union(tmp);its.push(Object.assign(it,{M}));}
+  if(!its.length||box.isEmpty())return null;
+  // with an area, only the part inside it counts toward the frame
+  if(A){const wy=new THREE.Box3();for(const it of its){tmp.copy(it.m.geometry.boundingBox).applyMatrix4(it.m.matrixWorld);wy.union(tmp);}const ab=new THREE.Box3();
+    for(const x of[A.x0,A.x1])for(const z of[A.z0,A.z1])for(const y of[wy.min.y,wy.max.y])ab.expandByPoint(new THREE.Vector3(x,y,z).applyMatrix4(R));
+    box.min.x=Math.max(box.min.x,ab.min.x);box.max.x=Math.min(box.max.x,ab.max.x);box.min.y=Math.max(box.min.y,ab.min.y);box.max.y=Math.min(box.max.y,ab.max.y);if(box.min.x>=box.max.x||box.min.y>=box.max.y)return null;}
+  const x0=box.min.x,x1=box.max.x,y0=box.min.y,y1=box.max.y,span=Math.max(x1-x0,y1-y0,0.01),cap=Math.min(2560,r.capabilities.maxTextureSize||2048);
+  const px=Math.max(span/cap,0.002),W=Math.max(8,Math.ceil((x1-x0)/px)+2),H=Math.max(8,Math.ceil((y1-y0)/px)+2),X0=x0-px,Y0=y0-px;
+  const zTop=box.max.z+1,near=0.5,far=box.max.z-box.min.z+2;
+  const cam=new THREE.OrthographicCamera(X0,X0+W*px,Y0+H*px,Y0,near,far);cam.position.set(0,0,zTop);cam.updateMatrixWorld(true);cam.updateProjectionMatrix();
+  const scene=new THREE.Scene();for(const it of its){const mm=new THREE.Mesh(it.m.geometry,MPJ.depthMat);mm.matrixAutoUpdate=false;mm.matrix.copy(it.M);mm.matrixWorld.copy(it.M);mm.frustumCulled=false;scene.add(mm);it.mesh=mm;}
+  const rt=new THREE.WebGLRenderTarget(W,H,{minFilter:THREE.NearestFilter,magFilter:THREE.NearestFilter,depthBuffer:true}),was=r.clippingPlanes,dep=new Uint8Array(W*H*4),ids=new Uint8Array(W*H*4),nor=D.st!=='lines'?new Uint8Array(W*H*4):null;
+  const idMats=[],nMat=new THREE.MeshNormalMaterial({side:THREE.DoubleSide});
+  try{r.clippingPlanes=planes;r.setRenderTarget(rt);r.setClearColor(0x000000,0);r.clear();r.render(scene,cam);r.readRenderTargetPixels(rt,0,0,W,H,dep);
+    its.forEach((it,k)=>{const v=k+1,m=new THREE.MeshBasicMaterial({color:new THREE.Color(((v>>16)&255)/255,((v>>8)&255)/255,(v&255)/255),side:THREE.DoubleSide});idMats.push(m);it.mesh.material=m;});
+    r.clear();r.render(scene,cam);r.readRenderTargetPixels(rt,0,0,W,H,ids);
+    if(nor){for(const it of its)it.mesh.material=nMat;r.clear();r.render(scene,cam);r.readRenderTargetPixels(rt,0,0,W,H,nor);}}
+  finally{r.setRenderTarget(null);r.clippingPlanes=was;rt.dispose();idMats.forEach(m=>m.dispose());nMat.dispose();}
+  const Z=new Float32Array(W*H),K=[255/256/16777216/255,255/256/65536/255,255/256/256/255,255/256/255];
+  for(let i=0;i<W*H;i++){const a=dep[4*i+3];if(!a&&!dep[4*i]&&!dep[4*i+1]&&!dep[4*i+2]){Z[i]=NaN;continue;}const d=dep[4*i]*K[0]+dep[4*i+1]*K[1]+dep[4*i+2]*K[2]+a*K[3];Z[i]=zTop-(near+d*(far-near));}
+  const eps=Math.max(0.02,px*1.5),zAt=(x,y)=>{const i=Math.floor((x-X0)/px),j=Math.floor((y-Y0)/px);let lo=Infinity;
+    for(let dj=-1;dj<=1;dj++)for(let di=-1;di<=1;di++){const ii=i+di,jj=j+dj;if(ii<0||jj<0||ii>=W||jj>=H)return -Infinity;const z=Z[jj*W+ii];if(z!==z)return -Infinity;if(z<lo)lo=z;}return lo;};
+  const lines=[],folds=[],hid=[],n1=new THREE.Vector3(),NM=new THREE.Matrix3();let bx0=Infinity,bx1=-Infinity,by0=Infinity,by1=-Infinity;
+  const grow=(a,b,c,d)=>{if(a<bx0)bx0=a;if(a>bx1)bx1=a;if(c<bx0)bx0=c;if(c>bx1)bx1=c;if(b<by0)by0=b;if(b>by1)by1=b;if(d<by0)by0=d;if(d>by1)by1=d;};
+  for(const it of its){const E=mpjEdges(it.m.geometry),wp=E.wp,ed=E.ed,fn=E.fn;NM.getNormalMatrix(it.M);const nv=wp.length/3,T=new Float32Array(nv*3),e=it.M.elements;
+    for(let i=0;i<nv;i++){const x=wp[3*i],y=wp[3*i+1],z=wp[3*i+2];T[3*i]=e[0]*x+e[4]*y+e[8]*z+e[12];T[3*i+1]=e[1]*x+e[5]*y+e[9]*z+e[13];T[3*i+2]=e[2]*x+e[6]*y+e[10]*z+e[14];}
+    const nz=t=>{n1.set(fn[3*t],fn[3*t+1],fn[3*t+2]).applyMatrix3(NM);return n1.z;};
+    for(let k=0;k<ed.length;k+=5){const kind=ed[k+4],t1=ed[k+2],t2=ed[k+3];let fold=false;
+      if(kind===2){const a=nz(t1),b=nz(t2);if((a>1e-6)===(b>1e-6)&&Math.abs(a)>1e-6&&Math.abs(b)>1e-6)continue;}
+      else if(t2>=0){const a=nz(t1),b=nz(t2);fold=Math.abs(a)>1e-6&&Math.abs(b)>1e-6&&(a>0)===(b>0);}
+      let ax=T[3*ed[k]],ay=T[3*ed[k]+1],az=T[3*ed[k]+2],bx=T[3*ed[k+1]],by=T[3*ed[k+1]+1],bz=T[3*ed[k+1]+2],out=false;
+      for(const p of planes){const da=p.normal.x*ax+p.normal.y*ay+p.normal.z*az+p.constant,db=p.normal.x*bx+p.normal.y*by+p.normal.z*bz+p.constant;
+        if(da<0&&db<0){out=true;break;}if(da<0||db<0){const t=da/(da-db),cx=ax+(bx-ax)*t,cy=ay+(by-ay)*t,cz=az+(bz-az)*t;if(da<0){ax=cx;ay=cy;az=cz;}else{bx=cx;by=cy;bz=cz;}}}
+      if(out)continue;const L=Math.hypot(bx-ax,by-ay)/px;if(L<0.35)continue;const n=Math.min(4000,Math.ceil(L*1.2)+1);let run=null,hr=null;const arr=fold?folds:lines;
+      for(let s=0;s<=n;s++){const t=s/n,x=ax+(bx-ax)*t,y=ay+(by-ay)*t,z=az+(bz-az)*t,vis=z>=zAt(x,y)-eps;
+        if(vis){if(!run)run=[x,y];run[2]=x;run[3]=y;if(hr){if(hr[2]!==undefined)hid.push(hr[0],hr[1],hr[2],hr[3]);hr=null;}}
+        else{if(run){if(run[2]!==undefined){arr.push(run[0],run[1],run[2],run[3]);grow(run[0],run[1],run[2],run[3]);}run=null;}if(D.hid&&!fold){if(!hr)hr=[x,y];hr[2]=x;hr[3]=y;}}}
+      if(run&&run[2]!==undefined){arr.push(run[0],run[1],run[2],run[3]);grow(run[0],run[1],run[2],run[3]);}if(hr&&hr[2]!==undefined)hid.push(hr[0],hr[1],hr[2],hr[3]);}}
+  // flat fills: each object in its layer colour (or grey), lit from the upper left so a massing reads in three tones
+  let img=null;if(nor){const cv=document.createElement('canvas');cv.width=W;cv.height=H;const cx=cv.getContext('2d'),id=cx.createImageData(W,H),dd=id.data,L=new THREE.Vector3(-0.45,0.75,0.5).normalize();
+    const cols=its.map(it=>{const c=new THREE.Color(D.st==='tone'?'#d4d6d9':it.col);return[c.r*255,c.g*255,c.b*255];});
+    for(let j=0;j<H;j++)for(let i=0;i<W;i++){const p=j*W+i,k=(ids[4*p]<<16|ids[4*p+1]<<8|ids[4*p+2])-1;if(k<0||k>=its.length)continue;
+      const nx=nor[4*p]/127.5-1,ny=nor[4*p+1]/127.5-1,nz2=nor[4*p+2]/127.5-1,sh=0.62+0.38*Math.max(0,Math.abs(nx*L.x+ny*L.y+nz2*L.z)),q=4*((H-1-j)*W+i),c=cols[k];
+      dd[q]=Math.min(255,c[0]*sh+(255-c[0])*0.12);dd[q+1]=Math.min(255,c[1]*sh+(255-c[1])*0.12);dd[q+2]=Math.min(255,c[2]*sh+(255-c[2])*0.12);dd[q+3]=255;}
+    cx.putImageData(id,0,0);img=cv;}
+  if(!(bx1>bx0))[bx0,bx1,by0,by1]=[x0,x1,y0,y1];if(img){bx0=Math.min(bx0,x0);bx1=Math.max(bx1,x1);by0=Math.min(by0,y0);by1=Math.max(by1,y1);}
+  const b={lines,folds,hid,img,X0,Y0,W,H,px,x0:bx0,x1:bx1,y0:by0,y1:by1,n:its.length};DZC.set(sig,b);if(DZC.size>6)DZC.delete(DZC.keys().next().value);return b;}
+function dzTitle(D){const v=DZV.find(x=>x[0]===D.view);return v?v[1]:'Diagram';}
+function drawDiag(cv,vw){const{c,w,h}=frame(cv,vw);const V=VCTX,D=dzOf(V)||{view:'top',st:'lines'};let b=null;try{b=dzBatch(D);}catch(e){console.error('diagram',e);}
+  if(!b){cv._T=null;cv._H={};titleBlock(c,V?V.name:'Diagram',w,h);c.font=`500 ${fz(10)}px ${FL}`;c.fillStyle=MUTED;c.textAlign='center';
+    c.fillText(D.area?'Nothing in the picked area. Pick another area or use the whole model.':'Model something, or switch layers on, to draw this diagram.',w/2,h/2);if(!vw)sxRedraw('plan');return;}
+  const pad=[fz(22),fz(30),fz(30),fz(24)];let bx0=b.x0,H0=b.y1,{sc,ox,oy}=fit(b.x0,b.x1,b.y0,b.y1,w,h,pad,vw);
+  if(vw&&vw.fixed&&vw.fixed.kind==='plan')({sc,ox,oy,bx0,H0}=vw.fixed);
+  // sheet coordinates follow the plan convention (second value grows down the sheet), so Draw mode, notes and Make2D work as on a plan;
+  // for the top view they are the model's own x and z
+  cv._T={kind:'plan',sc,ox,oy,bx0,bz0:-H0,H0};cv._H={wins:[],pins:[],top:[b.x0,b.x1]};const X=(x,y)=>[ox+(x-bx0)*sc,oy+(H0-y)*sc],Xp=(x,z)=>[ox+(x-bx0)*sc,oy+(z+H0)*sc];
+  if(D.view==='top'&&SS.north)drawNorth(c,w,h);if(SS.scale)drawScale(c,sc,h);titleBlock(c,V?`${V.name} · ${dzTitle(D).toLowerCase()}`:'Diagram',w,h);
+  drawEnts(c,cv,VID('plan'),Xp,()=>0,false);
+  if(b.img){const p=X(b.X0,b.Y0+b.H*b.px);c.save();c.imageSmoothingEnabled=true;c.drawImage(b.img,p[0],p[1],b.W*b.px*sc,b.H*b.px*sc);c.restore();}
+  c.lineCap='round';c.strokeStyle=INK;
+  if(b.hid.length){c.save();c.setLineDash([Math.max(2,4*FS),Math.max(1.5,3*FS)]);c.lineWidth=LW.hair||LW.thin;c.strokeStyle=mixC(INK,PAPER,0.35);mpjSegs(c,X,b.hid);c.restore();}
+  c.lineWidth=LW.thin;mpjSegs(c,X,b.folds);c.lineWidth=LW.med;mpjSegs(c,X,b.lines);
+  if(D.area&&D.view==='top'){const p=X(D.area.x0,-D.area.z0),q=X(D.area.x1,-D.area.z1);c.save();c.lineWidth=LW.hair||LW.thin;c.strokeStyle=mixC(INK,PAPER,0.5);c.setLineDash([Math.max(3,6*FS),Math.max(2,3*FS)]);c.beginPath();c.moveTo(p[0],p[1]);c.lineTo(q[0],p[1]);c.lineTo(q[0],q[1]);c.lineTo(p[0],q[1]);c.closePath();c.stroke();c.restore();}
+  drawEnts(c,cv,VID('plan'),Xp,()=>0,true);drawPins(c,VID('plan'),a=>Xp(a[0],a[1]),vw);if(!vw)sxRedraw('plan');return true;}
+const drawDiagW=wrapSheet('plan',drawDiag);
+{const _dp=drawPlan;drawPlan=function(cv,vw){if(VCTX&&VCTX.diag)return drawDiagW(cv||$('#plan'),vw);return _dp.apply(this,arguments);};VBASE.plan=drawPlan;}
+// plan settings, level links and "outside the model" fixes are for floor plans, not diagrams
+{const _pc=psCur;psCur=function(){const v=_pc.apply(this,arguments);return v&&v.diag?null:v;};}
+// numbers: diagrams are D-101, D-102…; floor plans keep A-1xx without counting them
+{const _vn=vNum;vNum=function(id){const v=vById(id);if(!v||v.kind!=='plan')return _vn.apply(this,arguments);if(v.unp)return'View';
+  if(v.diag){const i=vOf('plan').filter(x=>x.diag&&!x.unp).indexOf(v)+1;return`D-1${String(i).padStart(2,'0')}`;}
+  const i=vOf('plan').filter(x=>!x.diag&&!x.unp).indexOf(v)+1;return`A-1${String(i).padStart(2,'0')}`;};}
+// the drawings list: diagrams get their own group
+{const _dn=dwNavRender;dwNavRender=function(){const r=_dn.apply(this,arguments);try{const L=$('#dwList');if(!L||(dwNT!=='s'&&dwNT!=='v'))return r;const q=($('#dwQ').value||'').trim().toLowerCase(),ok=s=>!q||s.toLowerCase().includes(q);
+    L.querySelectorAll('[data-v]').forEach(b=>{const v=vById(b.dataset.v);if(v&&v.diag)b.remove();});if(L.querySelector('[data-new="diag"]'))return r;
+    const ds=vOf('plan').filter(v=>v.diag&&ok(v.name)),cur=sxTab;
+    let h=`<div class="dwg"><span>Diagrams</span><button type="button" class="dwx" data-new="diag" title="New diagram" aria-label="New diagram">${dwI('plus',14)}</button></div>`;
+    h+=ds.map(v=>`<button type="button" class="dwi${v.id===cur?' on':''}" data-v="${hx(v.id)}"><span class="dwth">${dwI('sheet',16)}</span><span class="dwtx"><b>${hx(v.name)}</b><small>${hx(dwNT==='s'?vNum(v.id)+' · '+dwScale(v):dzTitle(v.diag))}</small></span></button>`).join('')||`<p class="dwe">${q?'No match.':'Top-view or Make2D diagrams you can draw on. Use + to add one.'}</p>`;
+    const sec=[...L.querySelectorAll('.dwg')].find(g=>/^Sections$/.test(g.textContent.trim()));if(sec)sec.insertAdjacentHTML('beforebegin',h);else L.insertAdjacentHTML('beforeend',h);}catch(e){console.error(e);}return r;};}
+$('#dwList').addEventListener('click',e=>{const b=e.target.closest('[data-new="diag"]');if(!b)return;e.stopImmediatePropagation();dzNew();},true);
+function dzNew(){vDialog('plan',null);const t=$('#vwType');t.value='diag';t.dispatchEvent(new Event('change'));}
+// the New / Properties dialog: a third type, Diagram, with its view and style
+{const ty=$('#vwType');if(ty&&!ty.querySelector('[value=diag]'))ty.insertAdjacentHTML('beforeend','<option value="diag">Diagram, no cut: top view or Make2D of the model</option>');
+  const lab=ty&&ty.closest('label');if(lab)lab.insertAdjacentHTML('afterend',`<label data-vk="plan" class="dgf"><span>Seen</span><select id="vwDgV">${DZV.map(([k,n])=>`<option value="${k}">${n}</option>`).join('')}</select></label>
+    <label data-vk="plan" class="dgf"><span>Style</span><select id="vwDgS">${DZS.map(([k,n])=>`<option value="${k}">${n}</option>`).join('')}</select></label>
+    <label data-vk="plan" class="dgf vwlrow"><input type="checkbox" id="vwDgH"><span>Show hidden lines, dashed</span></label>
+    <p data-vk="plan" class="dgf note" style="margin:0">Pick any part of the Top view after it is made: Diagram settings on the right, Pick area in Top view.</p>`);
+  const st=document.createElement('style');st.textContent=`#viewDlg:not(.dgm) .dgf{display:none!important}#viewDlg.dgm #vwLvL,#viewDlg.dgm #vwCutL,#viewDlg.dgm #vwLowL,#viewDlg.dgm #vwOvhL,#viewDlg.dgm #vwTopL,#viewDlg.dgm #vwOvsL{display:none!important}`;document.head.appendChild(st);
+  ty.addEventListener('change',()=>{const on=ty.value==='diag';vwDlg.classList.toggle('dgm',on);if(on&&/plan$/i.test($('#vwName').value)&&!vwDlg._dgv)$('#vwName').value=vFree('Diagram');$('#vwNote').textContent=on?'A diagram draws the model without a cut, from above or from a corner or side, like Make2D. It stays linked to the model, and you can draw and write on it.':'A floor plan is cut at its height and seen from above. A cut above the walls, or a site plan, shows the roof and what is around it.';});}
+{const _vd=vDialog;vDialog=function(k,id){const r=_vd.apply(this,arguments);const v=id?vById(id):null,D=dzOf(v);vwDlg._dgv=v;
+  if(k==='plan'){$('#vwType').value=D?'diag':v&&v.site?'site':'floor';vwDlg.classList.toggle('dgm',!!D);$('#vwDgV').value=D?D.view:'top';$('#vwDgS').value=D?D.st||'lines':'lines';$('#vwDgH').checked=!!(D&&D.hid);
+    if(D)$('#vwNote').textContent='A diagram draws the model without a cut, from above or from a corner or side, like Make2D. It stays linked to the model, and you can draw and write on it.';}
+  else vwDlg.classList.remove('dgm');
+  const go=$('#vwGo').onclick;$('#vwGo').onclick=e=>{if(k!=='plan'||$('#vwType').value!=='diag'){if(v&&v.diag&&k==='plan'){snap();delete v.diag;}return go&&go(e);}
+    const nm=$('#vwName').value.trim().slice(0,40);if(!nm){$('#vwInfo').textContent='Give it a name.';$('#vwName').focus();return;}
+    if((S.views||[]).some(x=>x!==v&&x.name.toLowerCase()===nm.toLowerCase())){$('#vwInfo').textContent=`There is already a drawing called ${nm}.`;$('#vwName').focus();return;}
+    const D2={view:$('#vwDgV').value,st:$('#vwDgS').value,hid:$('#vwDgH').checked?1:0,area:D?D.area||null:null};if(D2.view==='cam')dzCam(D2);
+    // the plan dialog does the rest (name, layers, what it shows) as a seen-from-above plan; then it becomes a diagram
+    $('#vwType').value='site';const n0=(S.views||[]).length;try{go&&go(e);}finally{$('#vwType').value='diag';}
+    const t=v&&vById(v.id)?v:(S.views||[]).length>n0?S.views.find(x=>x.name===nm)||S.views[S.views.length-1]:null;if(!t)return;
+    t.diag=D2;delete t.site;delete t.lvId;delete t.cut;if(!t.stype)t.stype='pres';viewsInit();if(typeof vSig!=='undefined')vSig='';save();try{if(vwDlg.open)vwDlg.close();}catch(x){}
+    setLayTab(t.id);try{dwSync();}catch(x){}dzRender();drawSheets();try{dwNavRender();}catch(x){}
+    msg(`${nm}: ${dzTitle(D2).toLowerCase()}, ${DZS.find(x=>x[0]===D2.st)[1].toLowerCase()}. It follows the model. Pick area in Top view, on the right, draws just part of it.`);};return r;};}
+function dzCam(D){const v=VPS.find(x=>x.on&&!x.view)||AV,c=v.camera,d=new THREE.Vector3();c.getWorldDirection(d);D.d=[d.x,d.y,d.z].map(rnd4);D.up=[c.up.x,c.up.y,c.up.z].map(rnd4);}
+// Diagram settings on the right in Drawings
+function dzRender(){const side=$('#dwSide');if(!side)return;let box=$('#dwDiag');const v=vById(sxTab),D=LAY.on?dzOf(v):null;
+  if(!box){box=document.createElement('section');box.className='dwc';box.id='dwDiag';const ps=$('#dwPlanSet');if(ps)ps.before(box);else side.prepend(box);}
+  box.classList.toggle('on',!!D);if(!D)return;if(box.contains(document.activeElement)&&document.activeElement.tagName==='SELECT')return;const A=D.area;
+  box.innerHTML=`<div class="dwh"><b>Diagram</b><span class="psst">Follows the model</span></div><p class="psok">No cut. Drawn like Make2D from the model, so it updates when the model changes. Draw adds lines and text on this sheet only.</p>
+    <label class="psf"><span>Seen</span><select id="dzV">${DZV.map(([k,n])=>`<option value="${k}"${D.view===k?' selected':''}>${n}</option>`).join('')}</select></label>
+    <label class="psf"><span>Style</span><select id="dzS">${DZS.map(([k,n])=>`<option value="${k}"${(D.st||'lines')===k?' selected':''}>${n}</option>`).join('')}</select></label>
+    <label class="psf"><span>Hidden lines</span><span><input type="checkbox" id="dzH" ${D.hid?'checked':''}> Show dashed</span></label>
+    <div class="psf"><span>Area</span><span class="psro">${A?`Picked: ${hx(fmtL(A.x1-A.x0))} × ${hx(fmtL(A.z1-A.z0))}`:'The whole model'}</span></div>
+    <div class="psbtns"><button type="button" class="ghost" data-dz="pick">Pick area in Top view</button>${A?'<button type="button" class="ghost" data-dz="all">Whole model</button>':''}</div>
+    ${D.view==='cam'?'<div class="psbtns"><button type="button" class="ghost" data-dz="cam">Use the current 3D view again</button></div>':''}`;}
+function dzSet(f,m){const v=vById(sxTab),D=dzOf(v);if(!D)return;snap();f(D);save();try{sxRedraw();}catch(e){}drawSheets();dzRender();if(m)msg(m);}
+document.addEventListener('change',e=>{const t=e.target;if(!t.closest||!t.closest('#dwDiag'))return;
+  if(t.id==='dzV')dzSet(D=>{D.view=t.value;if(D.view==='cam')dzCam(D);},`Diagram: ${dzTitle({view:t.value}).toLowerCase()}.`);
+  else if(t.id==='dzS')dzSet(D=>{D.st=t.value;});else if(t.id==='dzH')dzSet(D=>{D.hid=t.checked?1:0;});});
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-dz]');if(!b)return;const a=b.dataset.dz;
+  if(a==='all')dzSet(D=>{D.area=null;},'The diagram shows the whole model again.');else if(a==='cam')dzSet(dzCam,'The diagram now looks the way the 3D view does.');else if(a==='pick')dzPickStart(sxTab);});
+{const _ps=psRender;psRender=function(){const r=_ps.apply(this,arguments);try{dzRender();}catch(e){console.error(e);}return r;};}
+{const _ds=dwSync;dwSync=function(){const r=_ds.apply(this,arguments);try{dzRender();}catch(e){}return r;};}
+{const st=document.createElement('style');st.textContent=`#dwDiag{display:none}body.dws #dwDiag.on{display:block;padding:12px}body.dws #dwDiag>.dwh{padding:0;margin:0 0 6px}
+#dzBand{position:fixed;z-index:40;border:1.5px dashed #2753b8;background:color-mix(in srgb,#2753b8 10%,transparent);pointer-events:none}
+#dzTip{position:fixed;z-index:41;left:50%;top:84px;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:8px 14px;border-radius:8px;font-size:13px;box-shadow:0 6px 20px rgb(0 0 0/.2)}`;document.head.appendChild(st);}
+// the icon strip lists the diagram card too
+{const _c=dwCards;dwCards=function(){const L=_c.apply(this,arguments),e=$('#dwDiag');if(e&&e.classList.contains('on'))L.unshift(['dwDiag','Diagram',DWI.frame]);return L;};}
+// picking part of the Top view: drag a box in the model, then back to the diagram
+let DZP=null;
+function dzPickStart(id){if(!vById(id))return;DZP={id,a:null};setLayTab('model');const tv=VPS.find(v=>v.on&&v.view==='top');if(tv)activate(tv);else setView('top',AV);
+  const tip=document.createElement('div');tip.id='dzTip';tip.textContent='Drag a box around the part of the model to draw. Esc cancels.';document.body.appendChild(tip);msg('Pick area: drag a box in the Top view. Esc cancels.');}
+function dzPickEnd(A){const p=DZP;DZP=null;$('#dzBand')?.remove();$('#dzTip')?.remove();if(!p)return;setLayTab(p.id);
+  if(A){const v=vById(p.id),D=dzOf(v);if(D){snap();D.area=A;save();try{sxRedraw();}catch(e){}drawSheets();dzRender();msg(`The diagram now draws the picked ${fmtL(A.x1-A.x0)} × ${fmtL(A.z1-A.z0)} area.`);}}else msg('Pick area cancelled.');}
+function dzGround(ev){const hv=vpAt(ev);ray.setFromCamera(ndc(ev,hv),hv.camera);const p=new THREE.Vector3();return ray.ray.intersectPlane(gplane,p)?[p.x,p.z]:null;}
+window.addEventListener('pointerdown',e=>{if(!DZP||e.button!==0)return;const vpEl=$('#vp');if(!vpEl||!vpEl.contains(e.target))return;e.preventDefault();e.stopPropagation();
+  const g=dzGround(e);if(!g)return;DZP.a=g;DZP.c=[e.clientX,e.clientY];let b=$('#dzBand');if(!b){b=document.createElement('div');b.id='dzBand';document.body.appendChild(b);}Object.assign(b.style,{left:e.clientX+'px',top:e.clientY+'px',width:'0px',height:'0px'});},true);
+window.addEventListener('pointermove',e=>{if(!DZP||!DZP.a)return;e.stopPropagation();const b=$('#dzBand');if(!b)return;const[x,y]=DZP.c;Object.assign(b.style,{left:Math.min(x,e.clientX)+'px',top:Math.min(y,e.clientY)+'px',width:Math.abs(e.clientX-x)+'px',height:Math.abs(e.clientY-y)+'px'});},true);
+window.addEventListener('pointerup',e=>{if(!DZP||!DZP.a)return;e.preventDefault();e.stopPropagation();const g=dzGround(e),a=DZP.a;DZP.a=null;
+  if(!g||Math.abs(g[0]-a[0])<0.05||Math.abs(g[1]-a[1])<0.05){$('#dzBand')?.remove();msg('Drag a bigger box, or press Esc to cancel.');return;}
+  dzPickEnd({x0:rnd3(Math.min(a[0],g[0])),x1:rnd3(Math.max(a[0],g[0])),z0:rnd3(Math.min(a[1],g[1])),z1:rnd3(Math.max(a[1],g[1]))});},true);
+window.addEventListener('click',e=>{if(DZP&&$('#vp')?.contains(e.target)){e.preventDefault();e.stopPropagation();}},true);
+window.addEventListener('keydown',e=>{if(DZP&&e.key==='Escape'){e.preventDefault();e.stopPropagation();dzPickEnd(null);}},true);
+try{dwNavRender();}catch(e){}
 
 </script>
 
