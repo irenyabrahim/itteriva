@@ -12468,13 +12468,7 @@ obb=function(P){const H=hull(P);if(H.length<3)return null;let best=null;for(let 
   if(!best)return null;let{u,n,s0,s1,t0,t1}=best;if(t1-t0>s1-s0){const u0=u;u=n;n=[-u0[0],-u0[1]];[s0,s1,t0,t1]=[t0,t1,-s1,-s0];}
   const tm=(t0+t1)/2,a=[u[0]*s0+n[0]*tm,u[1]*s0+n[1]*tm],b=[u[0]*s1+n[0]*tm,u[1]*s1+n[1]*tm];return{len:s1-s0,wid:t1-t0,a,b};};
 
-/* st14 (Ireny 2026-10-22): sketching in Front, Back, Right or Left aimed at the ground plane, which those views look along, so
-   the point landed absurdly far away. Until curves can lie on upright planes, those views say so instead of placing anything. */
-let SIDEWARN=0;
-{const _ga=groundAt;groundAt=function(ev,shift){const hv=vpAt(ev);if(hv&&['front','back','left','right'].includes(hv.view)){
-    if(Date.now()-SIDEWARN>4000){SIDEWARN=Date.now();const k={rhino:'Top or Perspective',revit:'a floor plan or {3D}',sketchup:'Top or Iso',autocad:'Top or SE Isometric'}[S.keymap]||'Top or Perspective';
-      msg(`Lines can't be drawn in ${vname(hv.view)} yet: curves lie flat on the ground or a level for now. Draw in ${k}; drawing on upright planes (like Rhino's Front construction plane) is next.`);}
-    try{tip.hidden=true;}catch(e){}return null;}return _ga.apply(this,arguments);};}
+
 /* st14 (Ireny 2026-10-22): Add level did nothing in an imported model: the Levels card only worked on a building made here.
    Without one, the card now holds the floor levels the model is read at (the same list as Ready for drawings): + Add level puts
    a level 3 m above the top one with its plan (clipping plane), the elevation can be typed, the name renames the plan, × removes it. */
@@ -12522,6 +12516,53 @@ function farJunk(){const bad=S.solids.filter(o=>isFar(o)&&!o.hidden&&!o.farHid);
   if(Array.isArray(S.sel))S.sel=S.sel.filter(id=>!bad.some(o=>o.id===id));save();try{CLP.gsig='';CLP.key='';}catch(e){}refresh();try{rdrWake();}catch(e){}
   msg(`Hid ${plural(bad.length,'line')} drawn in a side view that landed far off the model, which stretched the clipping planes and zoom. Nothing was deleted: Show brings ${bad.length>1?'them':'it'} back.`);return bad.length;}
 try{farJunk();}catch(e){console.error(e);}
+
+/* st15 (Ireny 2026-10-22): drawing in Front, Back, Right and Left. Like Rhino's Front and Right construction planes (AutoCAD's
+   Front/Right UCS views), a sketch started in a side view lies on the upright plane that view looks at: through the first point
+   snapped on the model, or else through the middle of the model. The sketch runs in that plane's own 2D coordinates (u across,
+   w down, so grid, Ortho, arcs and typed lengths work unchanged); finished lines become line objects like imported ones, so they
+   select, move, rotate, copy, layer and export like any object. Upright lines can't be extruded or offset yet. */
+const SIDEV=['front','back','left','right'];
+// u runs to the right on screen in each view: Front +x, Back -x, Right -z, Left +z
+function sideOf(view,c){const fb=view==='front'||view==='back',s=view==='back'||view==='right'?-1:1;return{view,c,fb,s,
+  w3:(u,w)=>fb?[s*u,-w,c]:[c,-w,s*u],uv:p=>fb?[s*p[0],-p[1]]:[s*p[2],-p[1]],
+  pl:new THREE.Plane(fb?new THREE.Vector3(0,0,1):new THREE.Vector3(1,0,0),-c)};}
+groundAt=(function(_ga){return function(ev,shift){const hv=vpAt(ev);if(!sk)return _ga.apply(this,arguments);
+  if(!sk.side&&!(hv&&SIDEV.includes(hv.view)))return _ga.apply(this,arguments);
+  if(!sk.side){if(sk.pts.length){msg('This sketch started flat on the ground; finish it in Top or Perspective, or press Esc and start again in this view.');return null;}
+    if(sk.solid){msg('Boxes, cylinders and spheres start in Top or Perspective. Lines, polylines, rectangles, circles and polygons can be drawn here.');return null;}
+    const os=osnapAt(ev,hv),b=bounds(),fb=hv.view==='front'||hv.view==='back';sk.side=sideOf(hv.view,os?(fb?os.p[2]:os.p[0]):rnd3(fb?b.cz:b.cx));}
+  const sd=sk.side;if(hv&&hv.view==='top')return null;
+  const os=osnapAt(ev,hv);if(os){try{trHide();}catch(e){}return sd.uv(os.p).map(rnd3);}
+  ray.setFromCamera(ndc(ev,hv),hv.camera);const v=new THREE.Vector3();if(!ray.ray.intersectPlane(sd.pl,v))return null;
+  const q=sd.uv([v.x,v.y,v.z]),g=D.grid;let p=g?[rnd3(Math.round(q[0]/g)*g),rnd3(Math.round(q[1]/g)*g)]:[rnd3(q[0]),rnd3(q[1])];
+  if(sk.shape==='poly'&&sk.pts.length){const l=sk.pts[sk.pts.length-1];
+    if((shift!==D.ortho)&&D.mode==='line'){if(Math.abs(p[0]-l[0])>Math.abs(p[1]-l[1]))p[1]=l[1];else p[0]=l[0];}
+    const f=sk.pts[0];if(sk.pts.length>=3&&Math.hypot(q[0]-f[0],q[1]-f[1])<vpPx(hv,v)*12)p=[f[0],f[1]];}
+  return p;};})(groundAt);
+{const _ds=drawSketch;drawSketch=function(){const r=_ds.apply(this,arguments);const sd=sk&&sk.side;
+  if(sd){if(sd.fb)sketchG.rotation.set(Math.PI/2,0,0);else sketchG.rotation.set(Math.PI/2,-Math.PI/2,0,'YXZ');sketchG.position.set(sd.fb?0:sd.c,0,sd.fb?sd.c:0);sketchG.scale.set(sd.s,1,1);}
+  else{sketchG.rotation.set(0,0,0);sketchG.position.set(0,0,0);sketchG.scale.set(1,1,1);}try{rdrWake();}catch(e){}return r;};}
+// a finished upright sketch: a line object in the model, its points in world coordinates
+function sideObj(name,P,closed,sd){const W=P.map(p=>sd.w3(p[0],p[1])),n=closed?W.length:W.length-1,L=[];for(let i=0;i<n;i++){const a=W[i],b=W[(i+1)%W.length];L.push(...a,...b);}
+  let x0=1e30,y0=1e30,z0=1e30,x1=-1e30,y1=-1e30,z1=-1e30;for(const[x,y,z]of W){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);z0=Math.min(z0,z);z1=Math.max(z1,z);}
+  const cx=(x0+x1)/2,cz=(z0+z1)/2,A=new Float32Array(L);for(let k=0;k<A.length;k+=3){A[k]-=cx;A[k+1]-=y0;A[k+2]-=cz;}
+  const gid='g'+Date.now().toString(36)+Math.random().toString(36).slice(2,8),G={l:A};GEO.set(gid,G);geoPutMany([[gid,G]]);
+  const s={id:'s'+(++solidSeq),name,kind:'mesh',geo:gid,pos:[rnd4(cx),rnd4(y0),rnd4(cz)],rot:0,sc:[1,1,1],hull:hull(W.map(p=>[p[0]-cx,p[2]-cz])),ymax:rnd4(y1-y0),ntri:0,nseg:n,
+    upr:{v:sd.view,closed:!!closed}};if(S.curLayer)s.layer=S.curLayer;return s;}
+const SIDEPL=v=>({rhino:{front:'Front',back:'Back',left:'Left',right:'Right'},autocad:{front:'Front',back:'Back',left:'Left',right:'Right'},
+  sketchup:{front:'Front',back:'Back',left:'Left',right:'Right'},revit:{front:'South',back:'North',left:'West',right:'East'}}[S.keymap]||{})[v]||v;
+function sideDone(c,what){S.solids.push(c);S.example=false;setSelIds([c.id]);refresh();try{rdrWake();}catch(e){}
+  msg(`${what} drawn on the ${SIDEPL(c.upr.v)} plane. It moves, rotates, copies and exports like any object; upright lines can't be extruded or offset yet.`);}
+{const _fo=finishOpen;finishOpen=function(){const sd=sk&&sk.side;if(!sd)return _fo.apply(this,arguments);
+  const P=sk.pts.filter((p,i,a)=>!i||Math.hypot(p[0]-a[i-1][0],p[1]-a[i-1][1])>1e-6),line=sk.line;sk=null;pending=null;drawSketch();tip.hidden=true;
+  if(P.length<2){setTool('select');return;}snap();const len=P.slice(1).reduce((a,p,i)=>a+Math.hypot(p[0]-P[i][0],p[1]-P[i][1]),0);
+  const c=sideObj(P.length===2?'Line':'Polyline',P,false,sd);if(!line)setTool('select');sideDone(c,`${c.name}, ${fmtL(len)},`);
+  if(line&&(S.keymap==='autocad'||S.keymap==='sketchup')){startShape('line');sk.side=sd;sk.pts=[P[P.length-1]];sk.corners=[0];drawSketch();renderOpts();}};}
+{const _fs=finishShape;finishShape=function(raw){const sd=sk&&sk.side;if(!sd)return _fs.apply(this,arguments);if(sk.solid){sk=null;drawSketch();setTool('select');return;}
+  const P=cleanFoot(raw);if(typeof P==='string'){msg(P);const sh=sk.shape;startShape(sh,false);sk.side=sd;return;}
+  const name={poly:'Polyline',rect:'Rectangle',circle:'Circle',polygon:'Polygon'}[sk.shape]||'Polyline';snap();sk=null;pending=null;drawSketch();tip.hidden=true;setTool('select');
+  sideDone(sideObj(name,P,true,sd),`Closed ${name.toLowerCase()}, ${fmtA(Math.abs(area(P)))} inside,`);};}
 
 </script>
 
