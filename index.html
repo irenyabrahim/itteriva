@@ -12566,7 +12566,7 @@ function sideDone(c,what){S.solids.push(c);S.example=false;setSelIds([c.id]);ref
 
 /* st16 (Ireny 2026-10-22): display mode lives in each viewport's right-click menu instead of the toolbar, and the axonometric
    views open as a flyout beside that menu (hover or click "Axonometric ▸"), so the menu stays short. */
-{const st=document.createElement('style');st.textContent=`label.fld:has(#dmode){display:none!important}
+{const st=document.createElement('style');st.textContent=`label.fld:has(#dmode),.vbar #proj,.vbar #axoSeg{display:none!important}
 .axom .axsub{justify-content:space-between}.axom .axsub::after{content:'▸';color:var(--muted);margin-left:12px}.axom .axsub.open{background:color-mix(in srgb,#2753b8 10%,transparent)}
 .axom .axfly{position:fixed;z-index:61;min-width:250px;max-height:80vh;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:4px}
 .axom .dmk{width:14px;flex:none;text-align:center;color:#2753b8}`;document.head.appendChild(st);}
@@ -12574,6 +12574,7 @@ function sideDone(c,what){S.solids.push(c);S.example=false;setSelIds([c.id]);ref
   axoM=document.createElement('div');axoM.className='axom';axoM.setAttribute('role','menu');const vm=v.mode||'shaded';
   let h='<h6>Standard views</h6>'+['top','front','right','back','left','iso'].map(k=>`<button type="button" role="menuitem" data-sv="${k}" class="${v.view===k?'on':''}">${hx(vname(k))}</button>`).join('');
   const on=!!AXO[v.view];h+=`<button type="button" role="menuitem" aria-haspopup="menu" class="axsub${on?' on':''}" data-sub="axo"><span>${hx(on?vname(v.view):AXL[S.keymap])}</span></button>`;
+  const par=v.camera===v.ortho;h+=`<h6>Projection</h6>`+[[false,0],[true,1]].map(([o,i])=>`<button type="button" role="menuitemradio" aria-checked="${par===o}" data-pj="${o?1:0}" class="${par===o?'on':''}"><span class="dmk">${par===o?'●':''}</span>${hx(UI[S.keymap].proj[i])}</button>`).join('');
   h+=`<h6>${hx(UI[S.keymap].mode)}</h6>`+Object.keys(MODES).map(m=>`<button type="button" role="menuitemradio" aria-checked="${vm===m}" data-dm="${m}" class="${vm===m?'on':''}"><span class="dmk">${vm===m?'●':''}</span>${hx(modeName(m))}</button>`).join('');
   axoM.innerHTML=h;document.body.appendChild(axoM);const r=anchor.getBoundingClientRect(),W=axoM.offsetWidth,H=axoM.offsetHeight;
   axoM.style.left=Math.min(Math.max(8,r.left),innerWidth-W-8)+'px';axoM.style.top=(r.bottom+4+H>innerHeight-8?Math.max(8,r.top-H-4):r.bottom+4)+'px';
@@ -12588,10 +12589,15 @@ function sideDone(c,what){S.solids.push(c);S.example=false;setSelIds([c.id]);ref
   // a short grace period, so a diagonal move toward the flyout across another row doesn't close it
   let flyT=0;axoM.addEventListener('mouseover',e=>{const b=e.target.closest('button');clearTimeout(flyT);if(e.target.closest('.axfly')||b===sub)return;if(b)flyT=setTimeout(flyClose,300);});
   axoM.addEventListener('keydown',e=>{if(e.key==='ArrowLeft'&&fly&&fly.contains(e.target)){e.preventDefault();flyClose();sub.focus();}});
-  axoM.addEventListener('click',e=>{const b=e.target.closest('[data-ax],[data-sv],[data-dm]');if(!b)return;axoClose();activate(v);
-    if(b.dataset.dm){setMode(b.dataset.dm,v);msg(`${UI[S.keymap].mode}: ${modeName(v.mode)} in the ${vpTitle(v)} viewport.`);}
+  axoM.addEventListener('click',e=>{const b=e.target.closest('[data-ax],[data-sv],[data-dm],[data-pj]');if(!b)return;axoClose();activate(v);
+    if(b.dataset.pj){setProjection(b.dataset.pj==='1',v);if(v===AV)syncViews();labelVPs();msg(`${vpTitle(v)}: ${UI[S.keymap].proj[+b.dataset.pj]}.`);}
+    else if(b.dataset.dm){setMode(b.dataset.dm,v);msg(`${UI[S.keymap].mode}: ${modeName(v.mode)} in the ${vpTitle(v)} viewport.`);}
     else if(b.dataset.ax)axoSet(b.dataset.ax,v);else{setView(b.dataset.sv,v);msg(`View: ${vpTitle(v)}.`);}try{rdrWake();}catch(e){}});
   const f=axoM.querySelector('[data-sv].on')||axoM.querySelector('button');if(f)f.focus();};}
+// st17 (Ireny): Projection joins the viewport menu and leaves the toolbar with Axonometric; Viewport color moves into Customize
+{const sel=$('#vtheme'),lab=sel&&sel.closest('label');const sec=document.createElement('div');sec.className='cpsec';sec.innerHTML='<h4 id="cpVthH">Viewport color</h4>';
+  if(lab){lab.id='cpVth';lab.querySelector('#vthemeLbl').hidden=true;sec.appendChild(lab);const vpS=$('#cpVp');(vpS?vpS.closest('.cpsec'):$('#custPop').lastElementChild).after(sec);}
+  const _rs=renderSbar;renderSbar=function(){const r=_rs.apply(this,arguments);try{const h=$('#cpVthH');if(h)h.textContent=VTL[S.keymap][0];}catch(e){}return r;};try{renderSbar();}catch(e){}}
 
 </script>
 
