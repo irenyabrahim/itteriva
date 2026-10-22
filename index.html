@@ -1131,8 +1131,8 @@ body.dws .layhost #dxTools,body.dws .layhost #dxPlus{display:none}
 .dxsk select{height:24px;max-width:104px}
 .dxsk em{font-style:normal;color:var(--muted)}
 .dxsw{width:22px;height:16px;border-radius:3px;border:1px solid var(--line)}
-.dxskb{display:flex;gap:6px;padding-top:3px}
-.dxskb .ghost{height:26px;font-size:12px}
+.dxskb{display:flex;flex-wrap:wrap;gap:6px;padding-top:3px}
+.dxskb .ghost{min-height:26px;height:auto;padding:3px 10px;font-size:12px;white-space:nowrap;line-height:1.25}
 .dxpre{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:0 10px 8px}
 .dxpr{display:flex;align-items:center;gap:8px;height:30px;padding:0 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);font:inherit;font-size:12px;cursor:pointer;text-align:left;min-width:0}
 .dxpr:hover{background:var(--panel-2)}
@@ -12051,6 +12051,8 @@ function clipImport(ISs,opt){const geo=ISs.filter(I=>I.fmt!=='S2B'&&I.fmt!=='IMA
   if(np||ns)setTimeout(()=>msg(`From the file's clipping planes: ${[np?plural(np,'plan'):'',ns?plural(ns,'section'):''].filter(Boolean).join(' and ')}, in the drawing lists.${up?` ${plural(up,'plane')} looking up or below the ground ${up===1?'was':'were'} left out.`:''}`),50);
   return np+ns;}
 
+// a project made before boards existed (or the sample) has none yet: the drawings list must still open
+{const _nr=dwNavRender;dwNavRender=function(){if(!Array.isArray(S.boards))S.boards=[];return _nr.apply(this,arguments);};}
 </script>
 
 </html>
