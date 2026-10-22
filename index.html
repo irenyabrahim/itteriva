@@ -8012,7 +8012,7 @@ async function parseIFC(buf,file){const api=await ifcLib(),W=window.WebIFC,IS=ne
         const col=pg.color,P=[];for(let j=0;j<ix.length;j++){const q=ix[j]*6,x=v[q],y=v[q+1],z=v[q+2];P.push(m[0]*x+m[4]*y+m[8]*z+m[12],m[1]*x+m[5]*y+m[9]*z+m[13],m[2]*x+m[6]*y+m[10]*z+m[14]);}
         parts.push({P,col:rgbHex(col.x*255,col.y*255,col.z*255),a:col.w});geo.delete();}
       // solid and see-through parts become separate objects so glass can stay glassy
-      for(const glass of[false,true]){const ps=parts.filter(p=>(p.a<0.99)===glass);if(!ps.length)continue;const o=isObj(IS,glass&&parts.length>ps.length?nm+' (glass)':nm,L,null);o.cat='Ifc'+tn.slice(3).toLowerCase().replace(/^./,x=>x.toUpperCase());o.ifc=tn;if(glass)o.op=Math.max(0.2,ps[0].a);
+      for(const glass of[false,true]){const ps=parts.filter(p=>(p.a<0.99)===glass);if(!ps.length)continue;const o=isObj(IS,glass&&parts.length>ps.length?nm+' (glass)':nm,L,null);o.cat='Ifc'+tn.slice(3).toLowerCase().replace(/^./,x=>x.toUpperCase());o.ifc=tn;{const stn=st&&stName.get(st);if(stn)o.st=stn;}if(glass)o.op=Math.max(0.2,ps[0].a);
         const cols=[...new Set(ps.map(p=>p.col))];if(cols.length===1)o.col=cols[0];else{o.c=[];for(const p of ps){c.set(p.col);for(let j=0;j<p.P.length/3;j++)o.c.push(c.r,c.g,c.b);}}
         for(const p of ps)for(let j=0;j<p.P.length;j++)o.p.push(p.P[j]);if(!L.color)L.color=o.col||cols[0];if(tn==='IFCSPACE'){o.op=0.25;o.hidden=true;}}});
     for(const L of IS.layers)if(!L.color)L.color='#b5bec7';if(IS.objs.some(o=>o.ifc==='IFCSPACE'))IS.notes.push('Rooms (IfcSpace) come in hidden; show them from the layer list.');
@@ -8137,7 +8137,7 @@ async function placeImport(ISs,opt){const f=UF2M[opt.units]||1,zUp=opt.up==='z';
       const G={p:Pw,l:Lw2};if(o.c&&Pw&&o.c.length===Pw.length)G.c=f32(o.c);if(o.fm&&o.fm.tex&&o.uv&&Pw&&o.uv.length===Pw.length/3*2){G.uv=f32(o.uv);G.tex=o.fm.tex;}
       const gid='g'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);GEO.set(gid,G);puts.push([gid,G]);
       const s={id:'s'+(++solidSeq),name:o.name,kind:'mesh',geo:gid,pos:[rnd4(cx),rnd4(y0),rnd4(cz)],rot:0,sc:[1,1,1],layer:mk(o.layer),hull:hull(pts),ymax:rnd4(y1-y0),ntri:Pw?Pw.length/9:0,nseg:Lw2?Lw2.length/6:0,src:IS.file};
-      if(o.col)s.col=o.col;if(o.op)s.op=o.op;if(o.fm){const{tex,texName,...fm}=o.fm;s.fm=fm;}if(o.hidden)s.hidden=true;if(o.grp)s.grp=o.grp;if(o.cat)s.cat=o.cat;S.solids.push(s);made.push(s);}}
+      if(o.col)s.col=o.col;if(o.op)s.op=o.op;if(o.fm){const{tex,texName,...fm}=o.fm;s.fm=fm;}if(o.hidden)s.hidden=true;if(o.grp)s.grp=o.grp;if(o.cat)s.cat=o.cat;if(o.st)s.st=o.st;if(o.ifc)s.ifc=o.ifc;S.solids.push(s);made.push(s);}}
   const stored=puts.length?geoPutMany(puts):Promise.resolve(true);cutCache.clear();
   if(made.length)S.curLayer=S.curLayer||'L0';refresh();if(made.length||proj)zoomExtents();
   stored.then(ok=>{if(!ok)msg('This browser could not store the imported geometry for next time. Export a project file to keep it.');});
@@ -12001,7 +12001,7 @@ function mpjRings(c,X,S2,px,fill){
    shows only when the plan asks for it: dashed (or solid, item by item) up to its top limit, never over a line already drawn.
    A section keeps what lies beyond its plane, optionally only up to a far limit; nothing on the viewer's side shows.
    The planes can be shown in 3D (hidden, faint or shown), and one of them can cut the 3D view live. ---------- */
-let PLX=null;
+var PLX=null;
 // a plan's plane: cut height, the floor of its level, lower and top limits, all in metres from the ground
 function planCtx(v){const VC=v&&v.kind==='plan'?v:null,md=S.pts?(MD||model()):null,k=VC&&VC.lv?VC.lv:0;let base=0;
   if(md){const PLV=k?Math.min(k,md.LV.length-1):0;base=PLV?md.LV[PLV].y:0;}else{const L=levelsOf();base=k&&L[k]?L[k].y:0;}
@@ -12598,6 +12598,419 @@ function sideDone(c,what){S.solids.push(c);S.example=false;setSelIds([c.id]);ref
 {const sel=$('#vtheme'),lab=sel&&sel.closest('label');const sec=document.createElement('div');sec.className='cpsec';sec.innerHTML='<h4 id="cpVthH">Viewport color</h4>';
   if(lab){lab.id='cpVth';lab.querySelector('#vthemeLbl').hidden=true;sec.appendChild(lab);const vpS=$('#cpVp');(vpS?vpS.closest('.cpsec'):$('#custPop').lastElementChild).after(sec);}
   const _rs=renderSbar;renderSbar=function(){const r=_rs.apply(this,arguments);try{const h=$('#cpVthH');if(h)h.textContent=VTL[S.keymap][0];}catch(e){}return r;};try{renderSbar();}catch(e){}}
+
+/* ===== st18 (Ireny 2026-10-22): imported model → floor levels → linked plans → sheets =====
+   A level is a model reference elevation (S.frLv, metres): {id, name, y, ref:'ffl'|'slab'|'custom', src:'meta'|'detect'|'manual',
+   st:'cand'|'ok', th (metres or null = unknown), thSrc, roof}. A plan view links to a level by v.lvId and stores its cut as an
+   offset above it (v.cutOff); its absolute cut, lower limit and overhead limit (v.cut, v.low, v.top) are derived from the level by
+   lvSync(), so the existing plan drawing code keeps reading them. Absolute cut = level elevation + cut offset; floor thickness never
+   enters it. S.datum is the project zero shown in labels; world coordinates never change with it. Moving a level never moves geometry.
+   This applies to models without a building made here (imported or free-modelled); a building made here keeps its own Levels. */
+const LVREF={ffl:'Top of finished floor',slab:'Top of structural slab',custom:'Custom datum'};
+const LVSRC={meta:'From the file (storey data)',detect:'Found in the geometry',manual:'Added by you'};
+const LTOL=0.01;// a plan's lower limit sits this far under its floor, so the floor's own top faces are seen
+function lvFree(){return!(S.pts&&S.pts.length);}
+function lvNewId(){return'lv'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function lvAll(){return Array.isArray(S.frLv)?S.frLv:[];}
+function lvById(id){return lvAll().find(l=>l.id===id)||null;}
+function lvPlans(id){return vOf('plan').filter(v=>v.lvId===id);}
+function CUTDEF(){return imperial()?1.2192:1.2;}// 4'-0" or 1.2 m
+function dtm(){return+S.datum||0;}
+function elvN(y){return fmtN(rnd4(y-dtm()),'input');}
+function elvL(y){const d=rnd4(y-dtm());return(d>0?'+':d<0?'':'±')+(d<0?'-'+fmtL(-d):fmtL(d));}
+function lvName(l){return l?l.name||'Level':'';}
+function lvNorm(l){if(!l.id)l.id=lvNewId();if(!['ffl','slab','custom'].includes(l.ref))l.ref='ffl';if(!LVSRC[l.src])l.src=l.a!=null?'detect':'manual';
+  if(l.st!=='cand'&&l.st!=='ok')l.st='ok';if(l.th!=null&&!(isFinite(l.th)&&l.th>0))l.th=null;l.y=rnd4(+l.y||0);return l;}
+function lvDefNames(L){let k=0;for(const l of L){if(l.name)continue;if(l.roof){l.name='Roof';continue;}l.name=k===0?'Ground':`Level ${k+1}`;k++;}return L;}
+// keep every field (frKeep used to keep only y and a); sorted by elevation, ids kept
+frKeep=function(L){S.frLv=L.map(l=>lvNorm({...l})).sort((a,b)=>a.y-b.y);lvDefNames(S.frLv);};
+// old code found a level's plan by matching elevations; now it is the plan linked to the level at that height
+frPlanOf=function(y){const l=lvAll().find(l=>Math.abs(l.y-y)<0.005);if(l){const p=lvPlans(l.id)[0];if(p)return p;}
+  const bld=!lvFree();return vOf('plan').find(v=>!v.lvId&&!v.site&&(bld||v.placed||!CPSTOCK.has(v.id))&&(v.fl!=null?Math.abs(v.fl-y)<0.005:!(+v.lv)&&Math.abs((+v.cut||0)-(y+1.2))<0.05))||null;};
+// derived plan fields from the linked level; called after any level or plan-setting change
+function lvSync(){if(!lvFree()||!Array.isArray(S.views))return;const L=lvAll();
+  for(const v of S.views){if(v.kind!=='plan'||!v.lvId)continue;const l=lvById(v.lvId);if(!l){v.lvLost=1;continue;}delete v.lvLost;
+    if(!(isFinite(v.cutOff)))v.cutOff=CUTDEF();v.fl=l.y;v.cut=rnd4(l.y+ +v.cutOff);v.low=rnd4(l.y-(v.lowOff!=null&&isFinite(v.lowOff)?+v.lowOff:LTOL));
+    if(v.ovh){const nx=L.find(x=>x.y>l.y+0.05);v.top=rnd4(l.y+(v.topOff!=null&&isFinite(v.topOff)?+v.topOff:nx?nx.y-l.y:3));}
+    if(v.nmAuto){const want=`${lvName(l)} plan`;if(v.name!==want&&!S.views.some(o=>o!==v&&o.name.toLowerCase()===want.toLowerCase()))v.name=want;}}}
+// projects saved before stable ids: give levels ids and names, and link plans that were placed at a level's height. A plan
+// whose height matches no level is left as it was and flagged, never shifted.
+function lvMigrate(){if(!lvFree())return;let ch=0;
+  if(Array.isArray(S.frLv)&&S.frLv.some(l=>!l.id||!l.name)){for(const l of S.frLv){if(!l.name){const p=vOf('plan').find(v=>v.fl!=null&&Math.abs(v.fl-l.y)<0.005);if(p&&/ plan$/i.test(p.name))l.name=p.name.replace(/ plan$/i,'');}lvNorm(l);}lvDefNames(S.frLv);ch=1;}
+  for(const v of S.views||[]){if(v.kind!=='plan'||v.lvId||v.lvChk||v.fl==null)continue;v.lvChk=1;ch=1;const l=lvAll().find(l=>Math.abs(l.y-v.fl)<0.005);
+    if(l){v.lvId=l.id;v.cutOff=rnd4((+v.cut||0)-l.y);if(v.low!=null&&isFinite(v.low))v.lowOff=rnd4(l.y-v.low);if(v.ovh&&v.top!=null)v.topOff=rnd4(v.top-l.y);}else v.lvReview=1;}
+  if(ch){lvSync();try{localStorage.setItem('s2b-state',JSON.stringify(S));}catch(e){}}}
+// undo and redo carry the project zero with the levels (neither is part of the model snapshot)
+{const _hp=hist.push;hist.push=function(...a){for(const e of a)if(e&&typeof e==='object')e.dat=dtm();return _hp.apply(this,a);};}
+{const _u=undo;undo=function(){const h=hist[hist.length-1],d=dtm();const r=_u.apply(this,arguments);const t=redoStack[redoStack.length-1];if(h&&t)t.dat=d;if(h&&h.dat!=null)S.datum=h.dat;lvAfter();return r;};}
+{const _r=redo;redo=function(){const h=redoStack[redoStack.length-1];const r=_r.apply(this,arguments);if(h&&h.dat!=null)S.datum=h.dat;lvAfter();return r;};}
+function lvAfter(){try{lvSync();if(typeof flvRender==='function')flvRender();if(typeof psRender==='function')psRender();}catch(e){console.error(e);}}
+
+/* ---- floor candidates from the geometry. Clusters horizontal faces by height with a tolerance that follows the model's size
+   (never display rounding); only upward faces of closed objects count as floors, both sides of open surfaces do (their
+   normals are arbitrary). A downward face 3-80 cm under a candidate with a similar area is that slab's underside and gives its
+   thickness. Furniture, stair and small pieces don't make levels; the top candidate is a roof candidate when the objects on it
+   are roofs or nothing stands on it. IFC storey names name the levels. Candidates within 12 cm whose plan areas overlap are one
+   floor (finish and slab tops); apart they stay separate (split levels). */
+const FRX={furn:/furn|chair|table|desk|bed|sofa|couch|plant|tree|shrub|car\b|people|person|fixture|casework|equip/i,stair:/stair|step|tread|ramp|landing/i,roof:/roof|parapet|coping/i};
+function frLevels(R){const all=[];let y0=1e9,y1=-1e9,x0=1e9,x1=-1e9,z0=1e9,z1=-1e9;
+  for(const r of R){for(const t of r.T)for(const p of t){if(p[1]<y0)y0=p[1];if(p[1]>y1)y1=p[1];if(p[0]<x0)x0=p[0];if(p[0]>x1)x1=p[0];if(p[2]<z0)z0=p[2];if(p[2]>z1)z1=p[2];}}
+  if(!(y1>y0))return{lv:[],cl:[]};const H=y1-y0,tol=Math.max(0.006,Math.min(0.03,H*0.002));
+  for(const r of R){const s=r.s,ln=LN(OL(objLayer(s))||{name:''})+' '+(s.name||'')+' '+(s.ifc||''),furn=FRX.furn.test(ln)||/FURNISH/.test(s.ifc||''),st=FRX.stair.test(ln)||/STAIR|RAMP/.test(s.ifc||''),rf=FRX.roof.test(ln)||/ROOF/.test(s.ifc||'');
+    for(const t of r.T){const n=polyN(t);if(!n||Math.abs(n[1])<0.985)continue;const ar=Math.abs((t[1][0]-t[0][0])*(t[2][2]-t[0][2])-(t[2][0]-t[0][0])*(t[1][2]-t[0][2]))/2;if(ar<1e-6)continue;
+      const y=(t[0][1]+t[1][1]+t[2][1])/3,cx=(t[0][0]+t[1][0]+t[2][0])/3,cz=(t[0][2]+t[1][2]+t[2][2])/3;all.push({y,ar,up:n[1]>0||r.open,dn:n[1]<0||r.open,cx,cz,furn,st,rf,sid:s.id,stn:s.st||null});}}
+  all.sort((a,b)=>a.y-b.y);const cl=[];
+  for(const f of all){let c=cl[cl.length-1];if(!c||f.y-c.y1>tol){c={ys:0,w:0,y1:f.y,up:0,dn:0,rf:0,x0:1e9,x1:-1e9,z0:1e9,z1:-1e9,st:new Map(),ids:new Set()};cl.push(c);}
+    c.y1=f.y;c.ys+=f.y*f.ar;c.w+=f.ar;if(f.furn||f.st)continue;if(f.up){c.up+=f.ar;c.x0=Math.min(c.x0,f.cx);c.x1=Math.max(c.x1,f.cx);c.z0=Math.min(c.z0,f.cz);c.z1=Math.max(c.z1,f.cz);c.ids.add(f.sid);if(f.rf)c.rf+=f.ar;if(f.stn)c.st.set(f.stn,(c.st.get(f.stn)||0)+f.ar);}if(f.dn)c.dn+=f.ar;}
+  for(const c of cl)c.y=c.ys/c.w;
+  const big=Math.max(0,...cl.map(c=>c.up)),AF=Math.max(1,(x1-x0)*(z1-z0)),min=Math.max(big*0.12,AF*0.01,0.5);
+  let cand=cl.filter(c=>c.up>=min);
+  // one floor's finish and slab tops: close and over the same area
+  const ov=(a,b)=>{const w=Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0),d=Math.min(a.z1,b.z1)-Math.max(a.z0,b.z0);if(w<=0||d<=0)return 0;const A=w*d,ar=x=>Math.max(1e-6,(x.x1-x.x0)*(x.z1-x.z0));return A/Math.min(ar(a),ar(b));};
+  const keep=[];for(const c of cand){const p=keep[keep.length-1];if(p&&c.y-p.y<0.12&&ov(p,c)>0.5){if(c.up>=p.up*0.3)keep[keep.length-1]=Object.assign(c,{up:c.up+p.up});continue;}keep.push(c);}cand=keep;
+  const out=cand.map(c=>{let th=null;const d=cl.filter(d=>d!==c&&d.y<c.y-0.03&&d.y>c.y-0.8&&d.dn>=c.up*0.4).sort((a,b)=>b.y-a.y)[0];if(d)th=rnd4(c.y-d.y);
+    const nm=[...c.st.entries()].sort((a,b)=>b[1]-a[1])[0];return{y:rnd4(c.y),a:rnd3(c.up),th,thSrc:th!=null?'detect':null,name:nm?nm[0]:null,src:nm?'meta':'detect',rf:c.rf>=c.up*0.5};});
+  if(out.length){const t=out[out.length-1];if(t.rf||(out.length>1&&y1-t.y<1.2&&t.y-out[out.length-2].y>=2))t.roof=true;}
+  for(const o of out){delete o.rf;o.st='cand';}
+  return{lv:out,cl:cl.filter(c=>c.up+c.dn>=min*0.25).map(c=>rnd4(c.y)),tol};}
+frScan=function(){const R=[],open=[];let tri=0;
+  for(const s of S.solids){if(s.hidden||s.img||s.kind==='curve'||!layerOn(objLayer(s)))continue;let T=[];try{T=objTris(s);}catch(e){continue;}if(!T.length)continue;tri+=T.length;if(tri>400000)break;
+    let op=false;if(T.length<60000){const E=new Map(),k=p=>p.map(v=>Math.round(v*1000)).join(',');for(const t of T)for(let i=0;i<3;i++){const a=k(t[i]),b=k(t[(i+1)%3]),e=a<b?a+'|'+b:b+'|'+a;E.set(e,(E.get(e)||0)+1);}
+      if([...E.values()].some(c=>c===1)){open.push(s.id);op=true;}}R.push({s,T,open:op});}
+  const D=frLevels(R);
+  const RX=[['Walls',/wall|wand|mur/i],['Floors',/floor|slab|deck|plate/i],['Roofs',/roof/i],['Windows',/window|glaz|glass|vitr/i],['Doors',/door/i],['Stairs',/stair/i]];
+  const lays=[];for(const l of S.olayers||[]){if(l.sys)continue;const m=RX.find(r=>r[1].test(LN(l)));if(m&&S.solids.some(o=>objLayer(o)===l.id))lays.push({id:l.id,name:LN(l),as:m[0]});}
+  FR={sig:frSig(),lv:lvDefNames(D.lv.slice(0,40)),cl:D.cl||[],open,lays};};
+// IFC storeys come along with each element (supporting names only; heights come from the geometry)
+
+/* ---- Step 2, in Model: the Floor levels panel and level markers on the real geometry ---- */
+const FLVV=new THREE.Vector4();const FLV={open:false,sel:null,pick:false,drag:null,g:null,sig:'',ret:null};
+{const st=document.createElement('style');st.textContent=`
+#flvCard .flvh{display:flex;align-items:center;gap:8px;margin-bottom:2px}#flvCard .flvh b{font-size:13px;letter-spacing:.04em;text-transform:uppercase}#flvCard .flvh .x{margin-left:auto}
+#flvCard .flvlead{margin:0 0 8px;color:var(--muted);font-size:12px}
+.flvlist{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:10px}
+.flvrow{display:grid;grid-template-columns:12px 1fr auto;gap:8px;align-items:center;padding:7px 10px;border:0;border-bottom:1px solid var(--line);background:transparent;color:inherit;text-align:left;font-size:12.5px;cursor:pointer}
+.flvrow:last-child{border-bottom:0}.flvrow:hover{background:color-mix(in srgb,#2753b8 6%,transparent)}.flvrow.on{background:color-mix(in srgb,#2753b8 12%,transparent)}
+.flvrow i{width:9px;height:9px;border-radius:50%;background:#7a8188}.flvrow.on i{background:#2753b8}.flvrow.roof i{background:#d08a1a}.flvrow small{color:var(--muted);font-size:11px;margin-left:6px}
+.flvrow em{font-style:normal;font-variant-numeric:tabular-nums}
+.flvp{border-top:1px solid var(--line);padding-top:8px}.flvp h5{margin:0 0 6px;font-size:12.5px}
+.flvf{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:center;margin:5px 0;font-size:12px}.flvf>span{color:var(--muted)}.flvf input,.flvf select{min-width:0;width:100%}
+.flvbtn{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.flvbtn button{flex:1}.flvpick[aria-pressed="true"]{background:#2753b8;color:#fff;border-color:#2753b8}
+.flvck{display:flex;gap:6px;align-items:center;font-size:12px;margin:6px 0}
+#flvCard details{border-top:1px solid var(--line);padding:6px 0}#flvCard summary{cursor:pointer;font-size:12px}
+.flvnote{display:flex;gap:6px;align-items:flex-start;background:color-mix(in srgb,#2753b8 7%,transparent);border-radius:6px;padding:6px 8px;font-size:11.5px;margin:8px 0;color:var(--ink)}
+.flvfoot{display:flex;gap:8px;margin-top:10px}.flvfoot button{flex:1}
+.flvwarn{color:#9a5b00;font-size:11.5px;margin:4px 0}
+#flvCard button.primary,#dwRev button.primary{background:#2753b8;border-color:#2753b8;color:#fff}#flvCard button.primary:disabled,#dwRev button.primary:disabled{opacity:.5}`;document.head.appendChild(st);}
+function flvLevels(){return Array.isArray(S.frLv)?S.frLv:[];}
+// the levels to review: saved ones, or the candidates found if none are saved yet (they become saved candidates)
+function flvEnsure(){if(FR.sig!==frSig()||!S.solids.length){try{frScan();}catch(e){console.error(e);}}
+  if(!Array.isArray(S.frLv)||!S.frLv.length&&FR.lv.length&&!S.frLvSeen){snap();frKeep(FR.lv.map(l=>({...l})));S.frLvSeen=1;save();}}
+function flvOpen(id,how){if(!lvFree()){levelCmd('levels');return;}if(LAY.on)setLayTab('model');flvEnsure();FLV.open=true;FLV.sel=id||(FLV.sel&&lvById(FLV.sel)?FLV.sel:(flvLevels().find(l=>l.st==='cand')||flvLevels()[0]||{}).id||null);
+  if(how==='import'){try{const v=AV;setView('front',v);setMode('ghosted',v);zoomOne(v);}catch(e){}}
+  flvRender();flvMarks();const c=$('#flvCard');if(c){try{const sb=document.querySelector('#pStrip button[data-g="s"]');if(sb&&!sb.classList.contains('on')&&getComputedStyle(c.closest('.tier')||c).display==='none')sb.click();}catch(e){}
+    const tier=c.closest('.tier');if(tier&&tier.classList.contains('col')){try{tier.querySelector('.ttl')?.click();}catch(e){}}c.scrollIntoView({block:'nearest'});}
+  const n=flvLevels().length,cand=flvLevels().filter(l=>l.st==='cand').length;
+  msg(n?`Floor levels: ${plural(n,'level')}${cand?`, ${cand} to confirm`:''}. Click a level or its marker; drag a marker or type its elevation. Markers never move the model.`:'Floor levels: none found. Add one where a floor is, or pick a floor surface.');}
+function flvClose(){FLV.open=false;FLV.pick=false;FLV.drag=null;flvRender();flvMarks();}
+function flvSel(id){FLV.sel=id;flvRender();flvMarks();rdrWake();}
+function flvHost(){return document.querySelector('.tier[data-g="s"] .tbody')||document.querySelector('.tier .tbody');}
+function flvRender(){let c=$('#flvCard');if(!FLV.open||!lvFree()){if(c)c.hidden=true;return;}const host=flvHost();if(!host)return;
+  if(!c){c=document.createElement('section');c.className='card';c.id='flvCard';c.setAttribute('aria-label','Floor levels');}if(c.parentElement!==host||host.firstElementChild!==c)host.prepend(c);c.hidden=false;
+  if(c.contains(document.activeElement)&&/INPUT|SELECT/.test(document.activeElement.tagName)&&!FLV.force)return;FLV.force=0;
+  const L=flvLevels(),cand=L.filter(l=>l.st==='cand').length,sel=lvById(FLV.sel),desc=[...L].reverse();
+  let h=`<div class="flvh"><b>Floor levels</b><button type="button" class="ghost x" data-f="close" title="Close the floor levels panel (the levels stay)" aria-label="Close">×</button></div>
+    <p class="flvlead">${L.length?cand?`${plural(cand,'floor candidate')} — confirm their positions.`:`${plural(L.length,'level')} set.`:'No floor levels found. Add one where a floor is.'}${dtm()?` Elevations are from project zero (${fmtL(dtm())} in the model).`:''}</p>`;
+  if(L.length)h+=`<div class="flvlist" role="listbox" aria-label="Levels">${desc.map(l=>`<button type="button" role="option" aria-selected="${l.id===FLV.sel}" class="flvrow${l.id===FLV.sel?' on':''}${l.roof&&l.st==='cand'?' roof':''}" data-l="${l.id}"><i></i><span>${hx(lvName(l))}${l.st==='cand'?`<small>${l.roof?'roof candidate':'candidate'}</small>`:''}</span><em>${hx(elvL(l.y))}</em></button>`).join('')}</div>`;
+  if(sel){const ps=lvPlans(sel.id);h+=`<div class="flvp"><h5>${hx(lvName(sel))} properties</h5>
+    <label class="flvf"><span>Name</span><input type="text" id="flvName" maxlength="32" value="${hx(lvName(sel))}"></label>
+    <label class="flvf"><span>Floor elevation</span><input type="text" inputmode="decimal" id="flvY" value="${hx(elvN(sel.y))}" title="Top of the ${sel.ref==='slab'?'structural slab':sel.ref==='custom'?'datum':'finished floor'}. Type a height or drag the marker."></label>
+    <label class="flvf"><span>Reference</span><select id="flvRef">${Object.entries(LVREF).map(([k,n])=>`<option value="${k}"${sel.ref===k?' selected':''}>${n}</option>`).join('')}</select></label>
+    <div class="flvbtn"><button type="button" class="ghost flvpick" data-f="pick" aria-pressed="${FLV.pick}">${FLV.pick?'Click a floor in the model… (Esc)':'Pick floor surface'}</button></div>
+    <label class="flvck"><input type="checkbox" id="flvZero" ${Math.abs(dtm()-sel.y)<1e-4&&dtm()!==0||(!dtm()&&Math.abs(sel.y)<1e-4)?'checked':''}> Use as project zero</label>
+    <label class="flvck"><input type="checkbox" id="flvRoof" ${sel.roof?'checked':''}> Roof (no occupied floor plan by default)</label>
+    <div class="flvbtn"><button type="button" class="ghost" data-f="add">+ Add level</button><button type="button" class="ghost" data-f="del" style="color:#b3261e">Remove level</button></div>
+    <details><summary>Floor thickness</summary><label class="flvf"><span>Thickness</span><input type="text" inputmode="decimal" id="flvTh" placeholder="Unknown" value="${sel.th!=null?hx(fmtN(sel.th,'input')):''}"></label>
+      <p class="note" style="margin:0">${sel.th!=null?(sel.thSrc==='detect'?'Measured from the slab top and underside found in the model.':'Typed by you.'):'Unknown. Not needed for drawings.'} Information only: it extends below the floor elevation and never moves the cut or the model.</p></details>
+    <details><summary>Advanced</summary><p class="note" style="margin:4px 0">Source: ${hx(LVSRC[sel.src]||'')}. ${sel.st==='cand'?'Not confirmed yet.':'Confirmed.'}</p>
+      <p class="note" style="margin:4px 0">${ps.length?`Linked drawings: ${ps.map(p=>hx(p.name)).join(', ')}.`:'No plan uses this level yet.'}</p></details>
+    <div class="flvnote">ⓘ Level markers do not move imported geometry.</div></div>`;}
+  else h+=`<div class="flvbtn"><button type="button" class="ghost" data-f="add">+ Add level</button><button type="button" class="ghost flvpick" data-f="pick" aria-pressed="${FLV.pick}">${FLV.pick?'Click a floor… (Esc)':'Pick floor surface'}</button></div>`;
+  if(FLV.ret&&vById(FLV.ret))h+=`<div class="flvbtn"><button type="button" class="ghost" data-f="back">Back to ${hx(vById(FLV.ret).name)}</button></div>`;
+  h+=`<div class="flvfoot"><button type="button" class="ghost" data-f="save">Save levels only</button><button type="button" class="primary" data-f="go"${L.some(l=>!l.roof)?'':' disabled'}>Confirm &amp; open Drawings</button></div>`;
+  c.innerHTML=h;}
+function flvSetY(l,y,how){snap();l.y=rnd4(y);frKeep(flvLevels());lvSync();save();refresh();flvMarks();msg(`${hx(lvName(l))} at ${elvL(l.y)}${how?` (${how})`:''}. The model did not move${lvPlans(l.id).length?`; ${lvPlans(l.id).map(p=>hx(p.name)).join(', ')} follow${lvPlans(l.id).length>1?'':'s'}`:''}.`);}
+function flvAdd(y){snap();const L=flvLevels().map(l=>({...l})),top=L.length?Math.max(...L.map(l=>l.y)):null,yy=y!=null?y:top==null?0:top+3;
+  const k=L.filter(x=>!x.roof&&x.y<yy-1e-4).length,l={id:lvNewId(),y:rnd4(yy),src:'manual',st:'ok',ref:'ffl',th:null,name:vFree0(k===0&&!L.length?'Ground':`Level ${k+1}`)};L.push(l);frKeep(L);
+  const me=S.frLv.find(x=>x.id===l.id);FLV.sel=l.id;save();refresh();flvMarks();msg(`${hx(lvName(me))} added at ${elvL(me.y)}. Type its elevation or drag its marker.`);}
+function vFree0(n){let s=n,i=2;while(flvLevels().some(l=>l.name&&l.name.toLowerCase()===s.toLowerCase()))s=`${n} (${i++})`;return s;}
+// removing a level that drawings use asks what to do with them; nothing is deleted without saying so
+function flvDel(id){const l=lvById(id);if(!l)return;const ps=lvPlans(id);
+  const go=(mode,to)=>{snap();for(const p of ps){if(mode==='move'&&lvById(to)){p.lvId=to;}else if(mode==='del'){S.views=S.views.filter(v=>v!==p);if(S.clip3d===p.id)S.clip3d=null;}}
+    frKeep(flvLevels().filter(x=>x.id!==id));if(FLV.sel===id)FLV.sel=(flvLevels()[0]||{}).id||null;viewsInit();if(typeof vSig!=='undefined')vSig='';lvSync();save();refresh();flvMarks();
+    msg(`${hx(lvName(l))} removed${ps.length?mode==='move'?`; ${ps.map(p=>hx(p.name)).join(', ')} now use${ps.length>1?'':'s'} ${hx(lvName(lvById(to)))}`:`, with ${ps.map(p=>hx(p.name)).join(', ')}`:''}. Undo brings it back.`);};
+  if(!ps.length){go('none');return;}
+  let d=$('#flvDelDlg');if(!d){d=document.createElement('dialog');d.id='flvDelDlg';document.body.appendChild(d);}const others=flvLevels().filter(x=>x.id!==id);
+  const ann=ps.filter(p=>S.dEdits&&S.dEdits[p.id]||(typeof CO!=='undefined'&&CO.notes||[]).some(n=>n.sheet===p.id));
+  d.innerHTML=`<div class="dlg"><h3>Remove ${hx(lvName(l))}?</h3><p>${ps.map(p=>`<b>${hx(p.name)}</b>`).join(', ')} ${ps.length>1?'are':'is'} linked to this level${ann.length?', and has drawing edits or notes on its sheet':''}.</p>
+    ${others.length?`<label class="flvf"><span>Link to</span><select id="flvDelTo">${others.map(o=>`<option value="${o.id}">${hx(lvName(o))} · ${hx(elvL(o.y))}</option>`).join('')}</select></label>`:''}
+    <div class="dlgbar"><button type="button" class="ghost" data-x="cancel">Cancel</button>${others.length?'<button type="button" class="ghost" data-x="move">Move the drawings and remove</button>':''}<button type="button" class="ghost" data-x="del" style="color:#b3261e">Delete the drawings too</button></div></div>`;
+  d.onclick=e=>{const b=e.target.closest('[data-x]');if(!b)return;const x=b.dataset.x;const to=$('#flvDelTo')&&$('#flvDelTo').value;d.close();if(x==='move')go('move',to);else if(x==='del')go('del');};
+  try{d.showModal();}catch(e){d.setAttribute('open','');}}
+function flvConfirmAll(){for(const l of flvLevels())l.st='ok';}
+document.addEventListener('click',e=>{const c=e.target.closest('#flvCard');if(!c)return;const r=e.target.closest('[data-l]');if(r){flvSel(r.dataset.l);flvFrame(r.dataset.l);return;}
+  const b=e.target.closest('[data-f]');if(!b)return;const f=b.dataset.f,l=lvById(FLV.sel);
+  if(f==='close')flvClose();else if(f==='add')flvAdd();else if(f==='del'&&l)flvDel(l.id);
+  else if(f==='pick'){FLV.pick=!FLV.pick;flvRender();msg(FLV.pick?`Click the top of a floor in any 3D or side view${l?` to set ${hx(lvName(l))}`:' to add a level there'}. Esc cancels.`:'Picking cancelled.');}
+  else if(f==='back'){const id=FLV.ret;FLV.ret=null;if(vById(id)){setLayTab(id);psRender();}}
+  else if(f==='save'){snap();flvConfirmAll();save();flvClose();refresh();msg(`${plural(flvLevels().length,'level')} saved. Plans come when you want them: Floor levels, then Confirm & open Drawings, or New plan in Drawings.`);}
+  else if(f==='go')flvGoDrawings();});
+document.addEventListener('change',e=>{const t=e.target;if(!t.closest||!t.closest('#flvCard'))return;const l=lvById(FLV.sel);if(!l&&t.id!=='flvZero')return;
+  if(t.id==='flvName'){const v=t.value.trim().slice(0,32);if(!v){t.value=lvName(l);return;}snap();l.name=v;lvSync();save();refresh();FLV.force=1;flvRender();flvMarks();msg(`Renamed to ${hx(v)}. Its drawings stay linked${lvPlans(l.id).length?' and follow the name':''}.`);}
+  else if(t.id==='flvY'){const n=parseNums(t.value);if(!n){t.value=elvN(l.y);msg('Type an elevation, like 10\' 0" or 3.2.');return;}flvSetY(l,n[0]*UF()+dtm(),'typed');FLV.force=1;flvRender();}
+  else if(t.id==='flvRef'){snap();l.ref=t.value;save();msg(`${hx(lvName(l))}: ${LVREF[l.ref]}. Nothing moved: the elevation stays ${elvL(l.y)}; type a new one if this reference sits elsewhere.`);}
+  else if(t.id==='flvZero'){snap();S.datum=t.checked&&l?l.y:0;save();refresh();FLV.force=1;flvRender();flvMarks();if(typeof psRender==='function')psRender();msg(t.checked&&l?`Project zero is now ${hx(lvName(l))}. Elevations read from it; the model and every cut stay where they are.`:'Project zero is back at the model origin.');}
+  else if(t.id==='flvRoof'){snap();l.roof=t.checked;save();FLV.force=1;flvRender();flvMarks();}
+  else if(t.id==='flvTh'){const s=t.value.trim();snap();if(!s){l.th=null;l.thSrc=null;}else{const n=parseNums(s);if(!n||!(n[0]>0)){t.value=l.th!=null?fmtN(l.th,'input'):'';hist.pop();return;}l.th=rnd4(n[0]*UF());l.thSrc='user';}save();FLV.force=1;flvRender();}});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(FLV.drag){FLV.drag.l.y=FLV.drag.y0;FLV.drag=null;tip.hidden=true;flvMarks();e.stopPropagation();msg('Drag cancelled.');return;}
+  if(FLV.pick){FLV.pick=false;flvRender();e.stopPropagation();msg('Picking cancelled.');}},true);
+// markers: a rectangle at each level's height around the model, its name and elevation beside it
+function flvMarks(){if(typeof scene==='undefined')return;if(!FLV.g){FLV.g=new THREE.Group();FLV.g.name='level markers';scene.add(FLV.g);}
+  for(const o of FLV.g.children.slice()){FLV.g.remove(o);o.traverse(x=>{x.geometry&&x.geometry.dispose();if(x.material){x.material.map&&x.material.map.dispose();x.material.dispose();}});}
+  FLV.rects=[];if(!FLV.open||!lvFree()){rdrWake();return;}const b=bounds(),m=Math.max(1,0.08*Math.max(b.w,b.dz)),x0=b.cx-b.w/2-m,x1=b.cx+b.w/2+m,z0=b.cz-b.dz/2-m,z1=b.cz+b.dz/2+m;
+  for(const l of flvLevels()){const sel=l.id===FLV.sel,col=sel?'#2753b8':l.roof&&l.st==='cand'?'#d08a1a':'#7a8188',y=l.y;
+    const P=[[x0,y,z0],[x1,y,z0],[x1,y,z1],[x0,y,z1]],g=new THREE.BufferGeometry().setFromPoints([...P,P[0]].map(p=>new THREE.Vector3(...p)));
+    const ln=new THREE.Line(g,new THREE.LineDashedMaterial({color:col,dashSize:m*0.35,gapSize:m*0.2,depthTest:false,transparent:true,opacity:sel?1:0.85}));ln.computeLineDistances();ln.renderOrder=20;FLV.g.add(ln);
+    const cv=document.createElement('canvas'),k=2,tx=`${lvName(l)}  ${elvL(y)}`;cv.width=10;const cx=cv.getContext('2d');cx.font=`600 ${12*k}px system-ui,sans-serif`;const w=Math.ceil(cx.measureText(tx).width)+16*k;cv.width=w;cv.height=22*k;
+    const c2=cv.getContext('2d');c2.fillStyle='#ffffff';c2.strokeStyle=col;c2.lineWidth=2*k;c2.beginPath();c2.roundRect?c2.roundRect(k,k,w-2*k,20*k,5*k):c2.rect(k,k,w-2*k,20*k);c2.fill();c2.stroke();
+    c2.font=`600 ${12*k}px system-ui,sans-serif`;c2.fillStyle=col;c2.textBaseline='middle';c2.fillText(tx,8*k,11*k);
+    const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv),depthTest:false,sizeAttenuation:false}));sp.center.set(1.04,0.5);sp.scale.set(w/k*0.0021,22*0.0021,1);sp.position.set(x0,y,z1);sp.renderOrder=21;const lw=w/k;sp.onBeforeRender=(r,sc,cam)=>{if(!cam.isOrthographicCamera)return;r.getCurrentViewport(FLVV);const hp=FLVV.w/r.getPixelRatio();if(!hp)return;const u=(cam.top-cam.bottom)/cam.zoom/hp;sp.scale.set(lw*u,22*u,1);sp.updateMatrixWorld(true);sp._o=1;};sp.onAfterRender=()=>{if(!sp._o)return;sp._o=0;sp.scale.set(lw*0.0021,22*0.0021,1);sp.updateMatrixWorld(true);};sp.userData.lvMark=l.id;FLV.g.add(sp);
+    FLV.rects.push({id:l.id,P:P.map(p=>new THREE.Vector3(...p))});}
+  rdrWake();}
+// the marker under the pointer: within 7 px of its rectangle's edges (or its label) in a 3D or side view
+function flvAt(e){if(!FLV.open||!FLV.rects||!FLV.rects.length)return null;const hv=vpAt(e);if(!hv||hv.view==='top')return null;const r=glc.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
+  const sp=p=>{const w=p.clone().project(hv.camera);return[(w.x+1)/2*hv.w+hv.x,(1-w.y)/2*hv.h+hv.y,w.z];};let best=null,bd=7;
+  for(const R of FLV.rects){const Q=R.P.map(sp);for(let i=0;i<4;i++){const a=Q[i],b=Q[(i+1)%4];if(a[2]>1||b[2]>1)continue;const dx=b[0]-a[0],dy=b[1]-a[1],L2=dx*dx+dy*dy;const t=L2?Math.max(0,Math.min(1,((mx-a[0])*dx+(my-a[1])*dy)/L2)):0;const d=Math.hypot(a[0]+dx*t-mx,a[1]+dy*t-my);if(d<bd){bd=d;best=R.id;}}
+    const lab=sp(new THREE.Vector3(R.P[0].x,R.P[0].y,R.P[3].z));if(mx<lab[0]&&mx>lab[0]-160&&Math.abs(my-lab[1])<11&&bd>=7){best=R.id;bd=0;}}
+  return best?{id:best,hv}:null;}
+// the height under the pointer on an upright plane through the model facing the camera
+function flvYAt(e,hv){ray.setFromCamera(ndc(e,hv),hv.camera);const b=bounds(),d=new THREE.Vector3();hv.camera.getWorldDirection(d);d.y=0;if(d.lengthSq()<1e-6)return null;d.normalize();
+  const pl=new THREE.Plane().setFromNormalAndCoplanarPoint(d,new THREE.Vector3(b.cx,0,b.cz)),v=new THREE.Vector3();return ray.ray.intersectPlane(pl,v)?v.y:null;}
+function flvSnapY(y,hv,free){if(free)return rnd4(y);const px=vpPx(hv,hv.controls.target),tol=px*8;let best=null,bd=tol;for(const c of FR.cl||[]){const d=Math.abs(c-y);if(d<bd){bd=d;best=c;}}
+  if(best!=null)return{y:best,s:'snapped to a flat surface'};const g=D.grid;return{y:g?rnd4(Math.round(y/g)*g):rnd4(y),s:g?'grid':''};}
+window.addEventListener('pointerdown',e=>{if(!FLV.open||e.button!==0||LAY.on)return;const hv=vpAt(e);if(!hv||!glc.contains(e.target)&&e.target!==glc)return;
+  if(FLV.pick){e.stopPropagation();e.preventDefault();const h=pick(e);if(!h||!h.point){msg('No surface there. Click on a floor in the model, or press Esc.');return;}
+    let ny=1;try{if(h.face){const n=h.face.normal.clone().transformDirection(h.object.matrixWorld);ny=n.y;}}catch(_){}const y=h.point.y;FLV.pick=false;
+    const how=Math.abs(ny)>0.985?'picked floor surface':'picked on a sloped face, at the exact point you clicked';
+    let l=lvById(FLV.sel);if(!l){flvAdd(y);l=lvById(FLV.sel);flvRender();msg(`Level added at ${elvL(y)} from the ${how}.`);return;}flvSetY(l,y,how);FLV.force=1;flvRender();return;}
+  if(tool!=='select')return;const at=flvAt(e);if(!at)return;e.stopPropagation();e.preventDefault();const l=lvById(at.id);if(!l)return;FLV.sel=l.id;flvRender();
+  FLV.drag={l,y0:l.y,hv:at.hv,moved:false};flvMarks();},true);
+window.addEventListener('pointermove',e=>{const D0=FLV.drag;if(!D0)return;e.stopPropagation();const y=flvYAt(e,D0.hv);if(y==null)return;const s=flvSnapY(y,D0.hv,e.shiftKey),yy=typeof s==='number'?s:s.y;
+  if(Math.abs(yy-D0.l.y)>1e-6){D0.l.y=yy;D0.moved=true;D0.how=typeof s==='number'?'':s.s;flvMarks();}const r=vp.getBoundingClientRect();tip.hidden=false;tip.style.left=(e.clientX-r.left)+'px';tip.style.top=(e.clientY-r.top)+'px';tip.textContent=`${lvName(D0.l)} ${elvL(D0.l.y)}${D0.how&&D0.how!=='grid'?' · '+D0.how:''}`;},true);
+window.addEventListener('pointerup',e=>{const D0=FLV.drag;if(!D0)return;e.stopPropagation();FLV.drag=null;tip.hidden=true;const y=D0.l.y;D0.l.y=D0.y0;if(D0.moved&&Math.abs(y-D0.y0)>1e-6)flvSetY(D0.l,y,'dragged');else{flvMarks();flvFrame(D0.l.id,true);}FLV.force=1;flvRender();},true);
+function flvFrame(id,quiet){FLV.sel=id;flvMarks();if(!quiet){const l=lvById(id);if(l)msg(`${hx(lvName(l))}: ${elvL(l.y)}${l.st==='cand'?' (candidate)':''}. Drag its marker, type an elevation or pick a floor surface.`);}}
+{const _rf=refresh;refresh=function(){const r=_rf.apply(this,arguments);try{lvMigrate();if(FLV.open){if(!lvFree())flvClose();else{flvRender();if(FLV.sig!==frSig()+'|'+JSON.stringify(flvLevels().map(l=>[l.id,l.y,l.name,l.roof,l.st]))+dtm()+FLV.sel){FLV.sig=frSig()+'|'+JSON.stringify(flvLevels().map(l=>[l.id,l.y,l.name,l.roof,l.st]))+dtm()+FLV.sel;flvMarks();}}}}catch(e){console.error(e);}return r;};}
+
+/* ---- Steps 3 and 4, in Drawings: plans linked to levels, their cut settings, honest empty-drawing messages, and placing
+   chosen plans on sheets. A plan made here is a view first (v.unp): it shows under Views and only joins the Sheets list,
+   with a sheet number, when it is placed. Every view made any other way is on a sheet as before. ---- */
+const PS={sel:new Set(),thumbs:new Map(),allowEmpty:false};
+{const st=document.createElement('style');st.textContent=`
+#dwPlanSet,#dwRev{display:none}body.dws #dwPlanSet.on,body.dws #dwRev.on{display:block}
+.psf{display:grid;grid-template-columns:118px 1fr;gap:6px 8px;align-items:center;margin:6px 0;font-size:12px}.psf>span{color:var(--muted)}.psf input,.psf select{min-width:0;width:100%}
+.psro{background:color-mix(in srgb,var(--line) 35%,transparent);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-variant-numeric:tabular-nums}
+.psrow2{display:flex;gap:8px;align-items:center}.psrow2 input[type=range]{flex:1}.psrow2 input[type=text]{width:84px;flex:none}
+.pswarn{background:color-mix(in srgb,#d08a1a 12%,transparent);border-left:3px solid #d08a1a;border-radius:6px;padding:6px 8px;font-size:11.5px;margin:6px 0}
+.psok{font-size:11.5px;color:var(--muted);margin:4px 0}.psst{font-size:11px;padding:1px 7px;border-radius:9px;background:color-mix(in srgb,#2e7d4f 14%,transparent);color:#2e6b45;white-space:nowrap}
+.psst.bad{background:color-mix(in srgb,#d08a1a 18%,transparent);color:#8a5200}.psst.on{background:color-mix(in srgb,#2753b8 12%,transparent);color:#2753b8}
+.psbtns{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}.psbtns button{flex:1}
+#dwPlanSet details,#dwRev details{border-top:1px solid var(--line);padding:6px 0}#dwPlanSet summary{cursor:pointer;font-size:12px}
+.rvrow{display:grid;grid-template-columns:18px 72px 1fr;gap:8px;align-items:center;padding:6px;border:1px solid var(--line);border-radius:8px;margin:6px 0;cursor:pointer}
+.rvrow.on{border-color:#2753b8;background:color-mix(in srgb,#2753b8 6%,transparent)}.rvrow img,.rvrow .rvph{width:72px;height:48px;object-fit:contain;background:#fff;border:1px solid var(--line);border-radius:4px}
+.rvrow b{display:block;font-size:12.5px}.rvissue{background:color-mix(in srgb,#d08a1a 10%,transparent);border:1px solid color-mix(in srgb,#d08a1a 40%,transparent);border-radius:8px;padding:8px;font-size:12px;margin:6px 0}
+#dwLink{display:none;align-items:center;gap:8px;font-size:12px;margin-left:auto;white-space:nowrap}body.dws #dwLink.on{display:inline-flex}#dwLink b{font-size:12.5px}
+#dwEmpty{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:5;display:none;max-width:min(440px,calc(100% - 32px));background:var(--panel);color:var(--ink);border:1px solid var(--line);border-left:3px solid #d08a1a;border-radius:8px;padding:12px 14px;box-shadow:0 6px 22px rgba(0,0,0,.14);font-size:12.5px}
+#dwEmpty.on{display:block}#dwEmpty b{display:block;margin-bottom:4px}#dwEmpty .psbtns button{flex:none}
+#dwOpenNote{position:absolute;right:12px;top:10px;z-index:5;display:none;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:3px solid #d08a1a;border-radius:8px;padding:5px 8px;font-size:12px}#dwOpenNote.on{display:flex}`;document.head.appendChild(st);}
+// a plan's level, by id (or nothing for plans that aren't linked)
+function psLv(v){return v&&v.kind==='plan'&&v.lvId?lvById(v.lvId):null;}
+function psCur(){const v=vById(sxTab);return v&&v.kind==='plan'&&!v.site&&lvFree()?v:null;}
+function psNew(l,another){const v={id:vNewId(),kind:'plan',name:vFree(`${lvName(l)} plan`),lvId:l.id,cutOff:CUTDEF(),stype:'pres',placed:true,unp:1};if(!another)v.nmAuto=1;S.views.push(v);return v;}
+// Step 2 → 3: confirm the levels, make (or reuse) one plan per occupied level, open the first in Drawings
+function flvGoDrawings(){const L=flvLevels().filter(l=>!l.roof);if(!L.length){msg('Add or keep at least one floor level that is not a roof first.');return;}
+  snap();flvConfirmAll();let made=0;for(const l of L)if(!lvPlans(l.id).length){psNew(l);made++;}lvSync();viewsInit();if(typeof vSig!=='undefined')vSig='';save();
+  FLV.open=false;flvRender();flvMarks();PS.sel=new Set(L.map(l=>lvPlans(l.id)[0]).filter(Boolean).map(v=>v.id));const first=lvPlans(L[0].id)[0];refresh();
+  dwNT='v';setLayTab(first.id);psRender();
+  msg(`${plural(flvLevels().length,'level')} confirmed. ${made?`${plural(made,'plan')} made, `:''}each cut ${fmtL(CUTDEF())} above its floor. Set each plan's cut on the right, then place the ones you want on sheets.`);}
+// the derived numbers shown for a plan
+function psNext(l){return flvLevels().find(x=>x.y>l.y+0.05&&!x.roof)||flvLevels().find(x=>x.y>l.y+0.05)||null;}
+// what a plan will show, from the objects that are visible to it: evidence only, no guessed causes
+function psDiag(v){const l=psLv(v),cut=+v.cut,low=v.low!=null?+v.low:-1e9,hide=vHideFn(v);const R={n:0,open:[],cause:null};
+  const all=S.solids.filter(s=>!s.img&&!s.txt&&!s.dim);if(!all.length){R.cause='none';return R;}
+  const vis=all.filter(s=>!(s.hidden||!layerOn(objLayer(s))));if(!vis.length){R.cause='hidden';return R;}
+  const inV=hide?vis.filter(s=>!hide(s)):vis;if(!inV.length){R.cause=(v.hl||[]).length?'layers':'crop';return R;}
+  const yr=s=>{try{if(s.kind==='mesh')return[s.pos[1],s.pos[1]+(s.ymax||0)*Math.abs(s.sc[1])];if(s.kind==='curve')return[s.pos[1],s.pos[1]];if(s.kind==='brep'){const ys=brepWorld(s).flat(2).map(p=>p[1]);return[Math.min(...ys),Math.max(...ys)];}return[s.pos[1],solidTop(s)];}catch(e){return null;}};
+  let below=0,above=0;for(const s of inV){const r=yr(s);if(!r)continue;if(r[0]<=cut+1e-4&&r[1]>=low-1e-4){R.n++;if((FR.open||[]).includes(s.id))R.open.push(s.id);}else if(r[0]>cut)above++;else below++;}
+  if(!R.n)R.cause=above&&!below?'cutLow':below&&!above?'cutHigh':'range';return R;}
+const PSC={none:'There is nothing in the model to draw.',hidden:'Everything in the model is hidden or on layers that are off.',layers:'The layers left out of this drawing hold everything in its range.',
+  crop:'The crop (what this drawing shows) leaves out everything.',cutLow:'The cut is below all the geometry it could show.',cutHigh:'The cut range is above all the geometry: nothing reaches up to this floor.',range:'Nothing reaches into this plan\'s view range.'};
+function psStatus(v){if(!v)return{k:'',t:''};if(v.lvLost)return{k:'bad',t:'Needs review'};const d=psDiag(v);v._dg=d;if(!d.n)return{k:'bad',t:'Empty'};return v.unp?{k:'',t:'Ready'}:{k:'on',t:`On ${vNum(v.id)}`};}
+function psRender(){const v=psCur(),on=!!v&&!!LAY.on;let box=$('#dwPlanSet'),rv=$('#dwRev'),lk=$('#dwLink');const side=$('#dwSide');if(!side)return;
+  if(!box){box=document.createElement('section');box.className='dwc';box.id='dwPlanSet';side.prepend(box);}
+  if(!rv){rv=document.createElement('section');rv.className='dwc';rv.id='dwRev';box.after(rv);}
+  if(!lk){lk=document.createElement('span');lk.id='dwLink';dwBar.appendChild(lk);}
+  box.classList.toggle('on',on);lk.classList.toggle('on',on);psEmpty(on?v:null);
+  const plans=vOf('plan').filter(p=>p.lvId);rv.classList.toggle('on',!!LAY.on&&lvFree()&&plans.length>0);if(rv.classList.contains('on'))psReview(rv,plans);
+  if(!on)return;const l=psLv(v);
+  lk.innerHTML=l?`<b>${hx(v.name)}</b><span>Linked to: ${hx(lvName(l))} · ${hx(elvL(l.y))}</span><button type="button" class="ghost" data-ps="locate">Locate level in Model</button>`:`<b>${hx(v.name)}</b><span>${v.lvLost?'Its level was removed':'Not linked to a level'}</span>`;
+  if(box.contains(document.activeElement)&&/INPUT|SELECT/.test(document.activeElement.tagName)&&!PS.force)return;PS.force=0;
+  if(!l){const L=flvLevels();box.innerHTML=`<div class="dwh"><b>Plan settings</b></div><p class="psok">${v.lvLost?'The level this plan was linked to is gone. Link it to another level; its cut keeps its offset.':'This plan cuts at a fixed height. Link it to a level so its cut follows the floor.'} Cut now at ${hx(elvL(+v.cut||0))}.</p>
+      ${L.length?`<label class="psf"><span>Link to level</span><select id="psLink"><option value="">Choose…</option>${L.map(x=>`<option value="${x.id}">${hx(lvName(x))} · ${hx(elvL(x.y))}</option>`).join('')}</select></label><p class="psok">Linking keeps the cut exactly where it is now.</p>`:'<p class="psok">No floor levels yet. Set them in Model, Floor levels.</p>'}
+      <div class="psbtns"><button type="button" class="ghost" data-ps="levels">Floor levels in Model</button></div>`;return;}
+  const nx=psNext(l),cutAbs=l.y+ +v.cutOff,warn=[];if(nx&&cutAbs>=nx.y)warn.push(`The cut (${elvL(cutAbs)}) is at or above ${hx(lvName(nx))} (${elvL(nx.y)}), so this plan will show that floor.`);
+  const d=v._dg||psDiag(v);if(!d.n&&PSC[d.cause])warn.push(PSC[d.cause]);
+  const step=imperial()?0.0254:0.01,mx=Math.max(3,nx?nx.y-l.y:3);
+  box.innerHTML=`<div class="dwh"><b>Plan settings</b><span class="psst ${psStatus(v).k}">${hx(psStatus(v).t)}</span></div><p class="psok">Changes update this drawing${v.unp?'':' and its sheet'}.</p>
+    <div class="psf"><span>Floor elevation <small>(linked)</small></span><div class="psrow2"><span class="psro" style="flex:1">${hx(elvL(l.y))}</span><button type="button" class="link" data-ps="locate">Edit in Model</button></div></div>
+    <div class="psf"><span>Cut above floor</span><div class="psrow2"><input type="text" inputmode="decimal" id="psCut" value="${hx(fmtN(+v.cutOff,'input'))}" aria-label="Cut above floor"><input type="range" id="psCutR" min="${step*12}" max="${mx}" step="${step}" value="${+v.cutOff}" aria-label="Cut above floor, slider"></div></div>
+    <div class="psf"><span>Cut elevation <small>(derived)</small></span><span class="psro">${hx(elvL(cutAbs))}</span></div>
+    <label class="psf"><span>Show below cut</span><select id="psLow"><option value="floor"${v.lowOff==null||v.lowOff<=LTOL+1e-6?' selected':''}>To this floor</option><option value="custom"${v.lowOff!=null&&v.lowOff>LTOL+1e-6?' selected':''}>Custom depth below floor</option></select></label>
+    ${v.lowOff!=null&&v.lowOff>LTOL+1e-6?`<label class="psf"><span>Depth below floor</span><input type="text" inputmode="decimal" id="psLowOff" value="${hx(fmtN(+v.lowOff,'input'))}"></label>`:''}
+    <label class="psf"><span>Overhead</span><span><input type="checkbox" id="psOvh" ${v.ovh?'checked':''}> Show overhead dashed</span></label>
+    ${warn.map(w=>`<div class="pswarn">${w}</div>`).join('')}
+    <div class="psbtns"><button type="button" class="ghost" data-ps="crop">${vScope(v)==='near'?`Crop: building + ${hx(fmtL(vNear(v)))}`:'Crop: everything shown'}</button><button type="button" class="ghost" data-ps="vis">Visibility…</button></div>
+    <details><summary>Advanced view range</summary>
+      <p class="psok">Lower limit ${hx(elvL(+v.low))}${v.ovh?`, overhead up to ${hx(elvL(+v.top))}`:''}. Overhead lines are only drawn between the cut and that limit.</p>
+      ${v.ovh?`<label class="psf"><span>Overhead to</span><input type="text" inputmode="decimal" id="psTop" value="${hx(fmtN(v.topOff!=null?+v.topOff:(nx?nx.y-l.y:3),'input'))}" title="Height above this floor"></label>`:''}
+      <div class="psbtns"><button type="button" class="ghost" data-ps="another">Add another plan for ${hx(lvName(l))}</button></div></details>
+    <div class="psbtns"><button type="button" class="ghost" data-ps="apply" title="Copies the cut above floor, the depth below it and the overhead setting. Each plan keeps its own floor.">Apply cut settings to selected plans (${[...PS.sel].filter(id=>id!==v.id&&vById(id)).length})</button></div>`;}
+// the Review & place list: thumbnails, checkboxes, status and what to do about problems
+function psThumb(v){const key=v.id+'|'+(typeof sheetSig==='function'?sheetSig().length:'')+'|'+v.cut+'|'+v.low+'|'+v.ovh+'|'+(v.hl||[]).join()+vScope(v);const t=PS.thumbs.get(v.id);if(t&&t.k===key)return t.u;
+  let host=$('#psTh');if(!host){host=document.createElement('div');host.id='psTh';host.style.cssText='position:fixed;left:-4000px;top:0;width:360px;height:240px;pointer-events:none';host.innerHTML='<canvas style="width:360px;height:240px"></canvas>';document.body.appendChild(host);}
+  const cv=host.firstChild;let u='';try{drawView(v.id,cv,{thumb:1});u=cv.toDataURL('image/jpeg',0.7);}catch(e){u='';}PS.thumbs.set(v.id,{k:key,u});return u;}
+function psReview(rv,plans){if(rv.contains(document.activeElement)&&document.activeElement.tagName==='INPUT')return;
+  for(const id of[...PS.sel])if(!vById(id))PS.sel.delete(id);const lvy=p=>(psLv(p)||{y:1e9}).y;plans=[...plans].sort((a,b)=>lvy(a)-lvy(b));
+  const sel=plans.filter(p=>PS.sel.has(p.id)),st=new Map(plans.map(p=>[p.id,psStatus(p)])),bad=sel.filter(p=>st.get(p.id).k==='bad'),unpl=sel.filter(p=>p.unp);
+  const cur=vById(sxTab),issue=cur&&st.get(cur.id)&&st.get(cur.id).k==='bad'?cur:bad[0];
+  let h=`<div class="dwh"><b>Review &amp; place</b></div><p class="psok">Pick the plans to put on sheets. Placed views stay linked to the model.</p><h6 style="margin:6px 0 2px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">Floor plans</h6>`;
+  h+=plans.map(p=>{const s=st.get(p.id),u=psThumb(p);return`<div class="rvrow${p.id===sxTab?' on':''}" data-rv="${p.id}"><input type="checkbox" data-rvc="${p.id}" ${PS.sel.has(p.id)?'checked':''} aria-label="Select ${hx(p.name)}">${u?`<img alt="" src="${u}">`:'<span class="rvph"></span>'}<span><b>${hx(p.name)}</b><span class="psst ${s.k}">${hx(s.t)}</span></span></div>`;}).join('');
+  if(issue){const d=issue._dg||psDiag(issue),l=psLv(issue);h+=`<div class="rvissue"><b>${hx(issue.name)}: ${issue.lvLost?'its level was removed':'no visible geometry with these settings'}</b><p style="margin:4px 0">${issue.lvLost?'Link it to a level in Plan settings.':hx(PSC[d.cause]||'')}${l?` Cut ${hx(elvL(+issue.cut))}, showing down to ${hx(elvL(+issue.low))}.`:''}</p>
+    <div class="psbtns"><button type="button" class="ghost" data-ps="edit" data-id="${issue.id}">Edit plan settings</button><button type="button" class="ghost" data-ps="layers">Check layers</button>${vScope(issue)==='near'?`<button type="button" class="ghost" data-ps="resetcrop" data-id="${issue.id}">Reset crop</button>`:''}</div></div>`;}
+  const n=unpl.length,nb=unpl.filter(p=>st.get(p.id).k==='bad').length;
+  if(nb)h+=`<label class="flvck"><input type="checkbox" id="psAllowEmpty" ${PS.allowEmpty?'checked':''}> Place empty views anyway</label>`;
+  h+=`<div class="psbtns" style="flex-direction:column"><button type="button" class="primary" data-ps="place"${!n||(nb&&!PS.allowEmpty)?' disabled':''}>${n?`Place ${plural(n,'selected plan')}`:sel.length?'Selected plans are on sheets':'Select plans to place'}</button></div>`;
+  rv.innerHTML=h;}
+function psPlace(){const plans=vOf('plan').filter(p=>p.lvId&&PS.sel.has(p.id)&&p.unp);const ok=plans.filter(p=>PS.allowEmpty||psStatus(p).k!=='bad');if(!ok.length)return;
+  snap();for(const p of ok)delete p.unp;save();viewsInit();if(typeof vSig!=='undefined')vSig='';dwNT='s';setLayTab(ok[0].id);dwSync();psRender();
+  msg(`${plural(ok.length,'plan')} placed: ${ok.map(p=>`${hx(p.name)} on ${vNum(p.id)}`).join(', ')}. They stay linked: change a level or a cut and the sheets follow. Scale, paper and title block are on the Sheet tab.`);}
+// the empty-drawing message on the canvas, and the open-surfaces note
+function psEmpty(v){const st=document.querySelector('.sxstage');if(!st)return;let e=$('#dwEmpty'),o=$('#dwOpenNote');
+  if(!e){e=document.createElement('div');e.id='dwEmpty';e.setAttribute('role','status');st.appendChild(e);o=document.createElement('div');o.id='dwOpenNote';st.appendChild(o);}
+  const d=v?(v._dg=psDiag(v)):null;e.classList.toggle('on',!!d&&!d.n);o.classList.toggle('on',!!d&&d.n>0&&d.open.length>0);if(!d)return;
+  if(!d.n)e.innerHTML=`<b>No visible geometry with these settings.</b><p style="margin:4px 0 8px">${hx(PSC[d.cause]||'')}</p><div class="psbtns"><button type="button" class="ghost" data-ps="edit" data-id="${v.id}">Edit plan settings</button>${psLv(v)?'<button type="button" class="ghost" data-ps="locate">Locate level in Model</button>':''}<button type="button" class="ghost" data-ps="layers">Check layers</button>${vScope(v)==='near'?`<button type="button" class="ghost" data-ps="resetcrop" data-id="${v.id}">Reset crop</button>`:''}</div>`;
+  else if(d.open.length)o.innerHTML=`<span>Open surfaces may affect cut fills.</span><button type="button" class="ghost" data-ps="inspect">Inspect</button>`;}
+function psSetCut(v,off,live){v.cutOff=rnd4(off);lvSync();if(live){PS.thumbs.delete(v.id);requestAnimationFrame(()=>{try{sxRedraw();}catch(e){}});return;}save();sxRedraw();drawSheets();PS.force=1;psRender();}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-ps]');if(!b)return;const a=b.dataset.ps,v=b.dataset.id?vById(b.dataset.id):psCur()||vById(sxTab);
+  if(a==='locate'){const l=psLv(v);FLV.ret=v&&v.id;setLayTab('model');flvOpen(l&&l.id);if(l){try{setView('front',AV);zoomOne(AV);}catch(_){}flvSel(l.id);}}
+  else if(a==='levels'){FLV.ret=v&&v.id;flvOpen();}
+  else if(a==='crop'&&v){snap();v.scope=vScope(v)==='near'?'all':'near';save();sxRedraw();drawSheets();PS.force=1;psRender();msg(vScope(v)==='near'?`Crop: the building plus ${fmtL(vNear(v))} around it.`:'Crop: everything that is on.');}
+  else if(a==='resetcrop'&&v){snap();v.scope='all';v.hl=[];save();sxRedraw();drawSheets();psRender();msg(`${hx(v.name)}: crop reset; everything that is on is shown.`);}
+  else if(a==='vis'&&v)vDialog('plan',v.id);
+  else if(a==='edit'&&v){if(sxTab!==v.id)setLayTab(v.id);PS.force=1;psRender();$('#psCut')?.focus();}
+  else if(a==='layers'){setLayTab('model');try{panTabFor&&panTabFor('l');}catch(_){}msg(`${OLN[S.keymap].t}: layers that are off or hidden objects don't draw. Switch them on here; per-drawing hiding is under Visibility in Drawings.`);}
+  else if(a==='inspect'&&v){const ids=(v._dg||psDiag(v)).open;setLayTab('model');setSelIds(ids.filter(id=>objById(id)));refresh();try{exec('zs');}catch(_){}msg(`${plural(ids.length,'open object')} selected: cuts through them draw as lines, not filled areas. Cap them (explicit, undoable) if their openings are flat.`);}
+  else if(a==='another'&&v){const l=psLv(v);if(!l)return;snap();const n=psNew(l,true);n.cutOff=v.cutOff;lvSync();viewsInit();save();PS.sel.add(n.id);setLayTab(n.id);psRender();msg(`${hx(n.name)} added for ${hx(lvName(l))}, with its own cut settings.`);}
+  else if(a==='apply'&&v){const T=[...PS.sel].map(vById).filter(p=>p&&p!==v&&p.lvId);if(!T.length){msg('Tick other plans in Review & place first.');return;}snap();for(const p of T){p.cutOff=v.cutOff;if(v.lowOff!=null)p.lowOff=v.lowOff;else delete p.lowOff;p.ovh=!!v.ovh;if(v.topOff!=null)p.topOff=v.topOff;else delete p.topOff;}
+    lvSync();save();drawSheets();psRender();msg(`Copied to ${T.map(p=>hx(p.name)).join(', ')}: cut ${fmtL(+v.cutOff)} above each one's own floor, ${v.lowOff>LTOL?`${fmtL(+v.lowOff)} below it`:'down to its floor'}, overhead ${v.ovh?'on':'off'}.`);}
+  else if(a==='place')psPlace();});
+document.addEventListener('click',e=>{const r=e.target.closest('[data-rv]');if(!r||e.target.closest('input'))return;setLayTab(r.dataset.rv);psRender();});
+document.addEventListener('change',e=>{const t=e.target;if(t.dataset&&t.dataset.rvc){t.checked?PS.sel.add(t.dataset.rvc):PS.sel.delete(t.dataset.rvc);psRender();return;}
+  if(t.id==='psAllowEmpty'){PS.allowEmpty=t.checked;psRender();return;}const v=psCur();if(!v)return;
+  if(t.id==='psCut'){const n=parseNums(t.value);if(!n||!(n[0]*UF()>0)){t.value=fmtN(+v.cutOff,'input');msg('Type a height above the floor, like 4\' 0" or 1.2.');return;}snap();psSetCut(v,n[0]*UF());msg(`${hx(v.name)}: cut ${fmtL(+v.cutOff)} above ${hx(lvName(psLv(v)))}, at ${elvL(+v.cut)}.`);}
+  else if(t.id==='psCutR'){snap();psSetCut(v,+t.value);}
+  else if(t.id==='psLow'){snap();if(t.value==='floor')delete v.lowOff;else v.lowOff=imperial()?0.3048:0.3;lvSync();save();sxRedraw();PS.force=1;psRender();}
+  else if(t.id==='psLowOff'){const n=parseNums(t.value);if(!n||n[0]<0){PS.force=1;psRender();return;}snap();v.lowOff=rnd4(Math.max(LTOL,n[0]*UF()));lvSync();save();sxRedraw();PS.force=1;psRender();}
+  else if(t.id==='psOvh'){snap();v.ovh=t.checked;if(!v.ovh)delete v.top;lvSync();save();sxRedraw();PS.force=1;psRender();}
+  else if(t.id==='psTop'){const n=parseNums(t.value);if(!n||!(n[0]>0)){PS.force=1;psRender();return;}snap();v.topOff=rnd4(Math.max(v.cutOff+0.05,n[0]*UF()));lvSync();save();sxRedraw();PS.force=1;psRender();}
+  else if(t.id==='psLink'&&t.value){const l=lvById(t.value);if(!l)return;snap();v.cutOff=rnd4((+v.cut||0)-l.y);if(v.low!=null&&isFinite(v.low))v.lowOff=rnd4(Math.max(LTOL,l.y-v.low));v.lvId=l.id;delete v.lvReview;delete v.lvLost;lvSync();save();PS.force=1;psRender();msg(`${hx(v.name)} linked to ${hx(lvName(l))}; its cut stays at ${elvL(+v.cut)}.`);}});
+// the slider redraws as it moves; the change is kept (one undo step) when it is let go
+document.addEventListener('input',e=>{if(e.target.id!=='psCutR')return;const v=psCur();if(!v)return;psSetCut(v,+e.target.value,true);const c=$('#psCut');if(c)c.value=fmtN(+v.cutOff,'input');});
+// plan views not on a sheet yet: no sheet number, listed under Views, not Sheets
+{const _vn=vNum;vNum=function(id){const v=vById(id);if(v&&v.unp)return'View';if(!v||!vOf(v.kind).some(x=>x.unp))return _vn.apply(this,arguments);
+  const i=vOf(v.kind).filter(x=>!x.unp).indexOf(v)+1;return`A-${{plan:1,section:2,elev:3,detail:5}[v.kind]}${String(i).padStart(2,'0')}`;};}
+{const _dn=dwNavRender;dwNavRender=function(){_dn.apply(this,arguments);const L=$('#dwList');if(!L)return;
+  if(dwNT==='s'){L.querySelectorAll('[data-v]').forEach(b=>{const v=vById(b.dataset.v);if(v&&v.unp)b.remove();});return;}
+  if(dwNT!=='v'||!lvFree())return;const q=($('#dwQ').value||'').trim().toLowerCase(),ok=s=>!q||s.toLowerCase().includes(q),cur=sxTab;
+  const item=(v,sub)=>`<button type="button" class="dwi${v.id===cur?' on':''}" data-v="${hx(v.id)}"><span class="dwth">${dwI('sheet',16)}</span><span class="dwtx"><b>${hx(v.name)}</b><small>${hx(sub)}</small></span></button>`;
+  let h='<div class="dwg"><span>Plans</span><button type="button" class="dwx" data-new="plan" title="New plan" aria-label="New plan">'+dwI('plus',14)+'</button></div>';
+  const L2=[...flvLevels()].sort((a,b)=>a.y-b.y);
+  for(const l of L2){const ps=lvPlans(l.id).filter(p=>ok(p.name));if(!ok(lvName(l))&&!ps.length)continue;
+    h+=ps.map(p=>item(p,`${lvName(l)} · ${elvL(l.y)}${p.unp?'':' · '+vNum(p.id)}`)).join('');
+    h+=ps.length?`<button type="button" class="dwi" data-addpl="${l.id}"><span class="dwth">${dwI('plus',14)}</span><span class="dwtx"><small>Add another plan for ${hx(lvName(l))}</small></span></button>`:`<button type="button" class="dwi" data-mkpl="${l.id}"><span class="dwth">${dwI('plus',14)}</span><span class="dwtx"><b>${hx(lvName(l))}</b><small>${hx(elvL(l.y))} · Create plan</small></span></button>`;}
+  const other=vOf('plan').filter(p=>!p.lvId&&ok(p.name));h+=other.map(p=>item(p,p.site?'Site plan':`Cut at ${elvL(+p.cut||0)} · not linked`)).join('');
+  if(!L2.length)h+=`<p class="dwe">No floor levels yet. <button type="button" class="link" data-ps="levels">Set floor levels in Model</button></p>`;
+  for(const[k,n]of[['section','Sections'],['elev','Elevations']]){h+=`<div class="dwg"><span>${n}</span></div>`+vOf(k).filter(v=>ok(v.name)).map(v=>item(v,vNum(v.id))).join('');}
+  const cams=L.innerHTML.split('<div class="dwg"><span>Levels</span></div>')[0];L.innerHTML=h+cams;};}
+$('#dwList').addEventListener('click',e=>{const b=e.target.closest('[data-mkpl],[data-addpl]');if(!b)return;const l=lvById(b.dataset.mkpl||b.dataset.addpl);if(!l)return;snap();
+  const v=psNew(l,!!b.dataset.addpl);if(b.dataset.addpl){const o=lvPlans(l.id)[0];if(o&&o!==v)v.cutOff=o.cutOff;}lvSync();viewsInit();if(typeof vSig!=='undefined')vSig='';save();PS.sel.add(v.id);setLayTab(v.id);dwSync();psRender();msg(`${hx(v.name)} made for ${hx(lvName(l))}, cut ${fmtL(+v.cutOff)} above it.`);});
+{const _ds=dwSync;dwSync=function(){const r=_ds.apply(this,arguments);try{psRender();}catch(e){console.error(e);}return r;};}
+{const _sr=sxRedraw;sxRedraw=function(){const r=_sr.apply(this,arguments);try{if(LAY.on&&document.body.classList.contains('dws'))psEmpty(psCur());}catch(e){}return r;};}
+
+/* ---- Step 1, the Import dialog: After import (review detected floors, check a known dimension), Import only / Import & review floors ---- */
+{const st=document.createElement('style');st.textContent=`#impAfter{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-top:8px;font-size:12.5px}
+#impAfter>b{display:block;color:#2753b8;margin-bottom:4px}#impAfter small{display:block;color:var(--muted);margin:0 0 4px 24px}#impAfter details{border-top:1px solid var(--line);margin-top:6px;padding-top:6px}#impAfter summary{cursor:pointer}
+#impDlg .dlgbar{gap:8px}#impGoRev[hidden]{display:none}`;document.head.appendChild(st);
+  const notes=$('#impNotes'),a=document.createElement('div');a.id='impAfter';
+  a.innerHTML=`<b>After import</b><label class="ck"><input type="checkbox" id="impRev"> Review detected floors</label><small>Find possible floor levels and confirm their positions after import.</small>
+    <details><summary>Check a known dimension (optional)</summary><label class="ck"><input type="checkbox" id="impDim"> After import, measure two points and compare with a distance you know</label>
+    <small>You click two points; the dialog shows the measured distance, you type the real one and see the correction before anything is rescaled.</small></details>`;
+  notes.after(a);const go=$('#impGo'),gr=document.createElement('button');gr.type='button';gr.className='primary';gr.id='impGoRev';gr.textContent='Import & review floors';gr.disabled=true;go.after(gr);}
+let IMPREV=false,IMPDIM=false;
+function impAfterSync(){const r=$('#impRev').checked,gr=$('#impGoRev'),go=$('#impGo');gr.hidden=!r;go.textContent=r?'Import only':'Import';go.className=r?'ghost':'primary';gr.disabled=go.disabled;}
+{const _is=impShow;impShow=function(){const r=_is.apply(this,arguments);try{const geo=(impSets||[]).filter(I=>I.fmt!=='S2B'&&I.fmt!=='IMAGE'),B=geo.length?convBox(geo,$('#impUnits').value,$('#impUp').value==='z'):null;
+    const bld=!!B&&(B.y1-B.y0)>2.2;$('#impAfter').hidden=!geo.length;$('#impRev').checked=bld;$('#impDim').checked=false;impAfterSync();}catch(e){console.error(e);}return r;};}
+$('#impRev').addEventListener('change',impAfterSync);
+new MutationObserver(()=>{const gr=$('#impGoRev');if(gr)gr.disabled=$('#impGo').disabled;}).observe($('#impGo'),{attributes:true,attributeFilter:['disabled']});
+$('#impGoRev').addEventListener('click',()=>{IMPREV=true;$('#impGo').click();});
+$('#impGo').addEventListener('click',()=>{IMPDIM=!$('#impAfter').hidden&&$('#impDim').checked;},true);
+{const _o=openImport;openImport=function(){IMPREV=false;IMPDIM=false;const r=_o.apply(this,arguments);try{$('#impAfter').hidden=true;$('#impGoRev').hidden=true;$('#impGo').textContent='Import';$('#impGo').className='primary';}catch(e){}return r;};}
+{const _pi=placeImport;placeImport=async function(ISs,opt){const rev=IMPREV,dim=IMPDIM;IMPREV=false;IMPDIM=false;const r=await _pi.apply(this,arguments);
+  try{const geo=ISs.some(I=>I.fmt!=='S2B'&&I.fmt!=='IMAGE');if(geo&&r&&r.made&&r.made.length){FR.sig='';
+      if(dim)setTimeout(()=>dimStart(r.made.map(x=>x.id),rev),200);else if(rev)setTimeout(()=>flvOpen(null,'import'),200);}}catch(e){console.error(e);}return r;};}
+// Check a known dimension: two picked points, the measured distance, the real one typed, the correction previewed, then applied (undoable)
+const DIMK={on:false,pts:[],ids:[],rev:false};
+function dimStart(ids,rev){Object.assign(DIMK,{on:true,pts:[],ids,rev});setLayTab('model');msg('Check a known dimension: click the first end of something whose real length you know (snaps are on). Esc skips.');}
+window.addEventListener('pointerdown',e=>{if(!DIMK.on||e.button!==0||LAY.on)return;const hv=vpAt(e);if(!hv||e.target!==glc)return;e.stopPropagation();e.preventDefault();
+  let p=null;try{p=ptAt(e);}catch(_){}if(!p){msg('No point there; click on the model.');return;}DIMK.pts.push(p);if(DIMK.pts.length<2){msg('Now click the other end.');return;}
+  DIMK.on=false;const[a,b]=DIMK.pts,m=Math.hypot(b[0]-a[0],b[1]-a[1],b[2]-a[2]);if(m<1e-6){msg('Those are the same point. Run CHECKDIM to try again.');return;}dimDlg(m,a);},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&DIMK.on){DIMK.on=false;e.stopPropagation();msg('Dimension check skipped.');if(DIMK.rev)flvOpen(null,'import');}},true);
+function dimDlg(m,p0){let d=$('#dimDlg');if(!d){d=document.createElement('dialog');d.id='dimDlg';document.body.appendChild(d);}
+  d.innerHTML=`<div class="dlg"><h3>Check a known dimension</h3><p>Measured between your two points: <b>${hx(fmtL(m))}</b>.</p>
+    <label class="flvf"><span>Real distance</span><input type="text" inputmode="decimal" id="dimReal" value="${hx(fmtN(m,'input'))}"></label><p class="note" id="dimPrev">Same as measured: nothing to correct.</p>
+    <div class="dlgbar"><button type="button" class="ghost" data-x="no">Keep the size</button><button type="button" class="primary" data-x="ok" disabled>Apply correction</button></div></div>`;
+  const inp=d.querySelector('#dimReal'),ok=d.querySelector('[data-x="ok"]'),pv=d.querySelector('#dimPrev');let f=1;
+  const upd=()=>{const n=parseNums(inp.value);f=n&&n[0]>0?n[0]*UF()/m:1;const b=bounds(DIMK.ids);
+    if(Math.abs(f-1)<1e-4){pv.textContent='Same as measured: nothing to correct.';ok.disabled=true;return;}ok.disabled=false;
+    pv.textContent=`Scale the imported objects by ${f.toFixed(4)} about your first point: ${fmtL(b.w)} × ${fmtL(b.dz)} × ${fmtL(b.h)} becomes ${fmtL(b.w*f)} × ${fmtL(b.dz*f)} × ${fmtL(b.h*f)}. Undo puts it back.`;};
+  inp.addEventListener('input',upd);d.onclick=e=>{const b=e.target.closest('[data-x]');if(!b)return;d.close();
+    if(b.dataset.x==='ok'){snap();for(const id of DIMK.ids){const s=objById(id);if(!s)continue;s.pos=s.pos.map((v,i)=>rnd4(p0[i]+(v-p0[i])*f));s.sc=(s.sc||[1,1,1]).map(v=>v*f);}FR.sig='';save();refresh();zoomExtents();msg(`Imported objects scaled by ${f.toFixed(4)}.`);}
+    else msg('Size kept as imported.');if(DIMK.rev)setTimeout(()=>flvOpen(null,'import'),100);};
+  try{d.showModal();}catch(e){d.setAttribute('open','');}inp.focus();inp.select();}
+{const _r=run;run=function(raw){const q=String(raw||'').trim().toLowerCase();
+  if(/^(checkdim|checkdimension|knowndimension)$/.test(q)){cmdIn.value='';const ids=S.solids.filter(o=>!o.hidden).map(o=>o.id);dimStart(ids,false);return;}
+  if(/^(floorlevels|reviewfloors|levelreview|flevels)$/.test(q)){cmdIn.value='';flvOpen();return;}return _r.apply(this,arguments);};}
+// the Levels card and Ready for drawings point to the Floor levels panel for imported models (one list, one place to edit it)
+{const _rl=renderLevels;renderLevels=function(){if(!lvFree())return _rl.apply(this,arguments);const box=$('#lvList');if(!box)return;const N=LVN[S.keymap]||LVN.rhino,L=flvLevels();
+  $('#lvTitle').textContent=N.t;$('#lvAdd').textContent=N.add;$('#lvAdd').disabled=false;$('#lvCount').textContent=L.length?String(L.length):'';
+  $('#lvNote').innerHTML=`<button type="button" class="link" id="lvRev">${L.length?'Review floor levels':'Find floor levels'}</button>`;box.innerHTML='';
+  for(const l of L){const r=document.createElement('div');r.className='lvrow';r.setAttribute('role','listitem');r.style.gridTemplateColumns='1fr auto';r.innerHTML=`<button type="button" class="link" data-lvo="${l.id}" style="text-align:left">${hx(lvName(l))}${l.st==='cand'?' <small>(candidate)</small>':''}</button><span class="el">${hx(elvL(l.y))}</span>`;box.appendChild(r);}};}
+document.addEventListener('click',e=>{if(e.target.closest('#lvRev')){flvOpen();return;}const b=e.target.closest('[data-lvo]');if(b)flvOpen(b.dataset.lvo);});
+{const _al=addLevel;addLevel=function(h){if(!lvFree())return _al.apply(this,arguments);if(!FLV.open)flvOpen();flvAdd();return true;};}
+frLvRender=function(){const c=$('#frCard');if(!c||c.hidden)return;const h5=[...c.querySelectorAll('.frsec h5')].find(h=>/^Levels found$/i.test(h.textContent.trim()));if(!h5)return;const L=flvLevels();
+  h5.parentElement.innerHTML=`<h5>Floor levels</h5><p class="note" style="margin:0 0 6px">${L.length?`${plural(L.length,'level')}${L.filter(l=>l.st==='cand').length?`, ${L.filter(l=>l.st==='cand').length} to confirm`:''}: ${L.map(l=>hx(lvName(l))).join(', ')}.`:FR.lv&&FR.lv.length?`${plural(FR.lv.length,'possible floor')} found.`:'None found yet.'}</p><div class="frbtn"><button type="button" class="ghost" id="frLvGo">Review floor levels</button></div>`;
+  $('#frLvGo').onclick=()=>flvOpen();};
+// start-up: older projects get level ids and plan links once
+try{lvMigrate();}catch(e){console.error(e);}
 
 </script>
 
