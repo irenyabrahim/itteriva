@@ -1536,6 +1536,9 @@ body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padd
 .frin{width:104px;font:inherit;padding:2px 5px}
 .frx{border:0;background:none;color:var(--muted);font-size:16px;line-height:1;padding:1px 5px;margin:0;cursor:pointer;border-radius:4px}
 .frx:hover,.frx:focus-visible{color:var(--ink);background:var(--hover,rgba(127,127,127,.14))}
+
+/* st11 (Ireny 2026-10-22): a docked command line keeps the same height whether or not a message shows, so the view never resizes (it looked like a zoom on every select) */
+.cmd.dock output,.cmd.dock output:empty{display:block;flex:1 1 100%;height:2.9em;max-height:2.9em;min-height:2.9em;line-height:1.45;overflow:auto;max-width:none;white-space:normal;text-overflow:clip;padding-left:0;border-left:0}
 </style>
 
 <header class="top">
@@ -12397,6 +12400,9 @@ function frLvRender(){const c=$('#frCard');if(!c||c.hidden)return;const h5=[...c
 {const _fr=frRender;frRender=function(){const r=_fr.apply(this,arguments);try{frLvRender();}catch(e){console.error(e);}return r;};}
 try{clipSig='';clipUI();clipShowSync();}catch(e){}
 {const _cs=clipSet;clipSet=function(){const r=_cs.apply(this,arguments);CLP.gsig='';rdrWake();return r;};}
+
+/* st11: each new message starts at its first line */
+new MutationObserver(()=>{cmdMsg.scrollTop=0;}).observe(cmdMsg,{childList:true,subtree:true,characterData:true});
 </script>
 
 </html>
