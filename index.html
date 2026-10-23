@@ -13423,9 +13423,9 @@ function ktSteps(k){const P=KTP[k]||'your program',lv=ptName('s'),mb=ktTool('bui
   {sec:'Your setup',el:'#cmdForm',t:'Type what you already know',
     f:pick({rhino:'Polyline, ExtrudeCrv, BooleanUnion, Trim and Offset run as you expect, and the command line asks for the next input.',revit:'WA, DR, WN, LI and TR run as you expect.',sketchup:'L, R, P, M and F run as you expect, and you can type a length right after a click.',autocad:'PL, L, TR, EX, O and F run as you expect, and the command line asks for the next input.'}),
     n:`Commands from all four programs work here. Type ${ktOther(k)} and it runs too. The command line says which tool it ran and where that command comes from.`},
-  {sec:'Modeling',el:['.vplabel'],t:'Views and display modes',
+  {sec:'Modeling',el:[()=>{const b=$('#vrView');return b&&!b.hidden&&b.offsetWidth?b:document.querySelector('.vplabel');}],t:'Views and display modes',
     f:pick({rhino:'Like the viewport title menu in Rhino.',revit:'Like switching views and visual styles in Revit.',sketchup:'Like the camera views and face styles in SketchUp.',autocad:'Like the view and visual style controls in the corner of the drawing area in AutoCAD.'}),
-    n:'Click ▾ on a view title for other views and display modes such as Wireframe, Shaded, Rendered and Ghosted. Plan and side views stay flat: you can pan and zoom, but they never tilt by accident.'},
+    n:'Click the view name at the start of the bar above the view (or ▾ on a view title in four views) for other views and display modes such as Wireframe, Shaded, Rendered and Ghosted. Plan and side views stay flat: you can pan and zoom, but they never tilt by accident.'},
   {sec:'Modeling',el:['#rail [data-tool="build"]','#gRail [data-tool="build"]','#rail'],t:'Sketch freely, then make it a building',
     f:pick({rhino:'Curves, extrusions and Booleans work like in Rhino.',revit:'Walls, floors, roofs, doors and windows are real building elements, like in Revit.',sketchup:'Draw a shape and push or pull it, like in SketchUp.',autocad:'Lines and polylines with snaps, trim and offset work like in AutoCAD.'}),
     n:`${mb} turns a sketch, a closed outline or a massing solid into walls, floors and a roof. ${wc} does the same for lines you traced over a plan. `+pick({rhino:'No plug-in, and no rebuilding the model in another program to get drawings.',revit:"You don't have to start with walls: mass it freely first, then convert.",sketchup:'Your massing stops being only faces: it knows which part is a wall, a floor and a roof.',autocad:'Your 2D outline becomes a 3D building, so sections and elevations come for free.'})},
@@ -13523,6 +13523,201 @@ $('#pSel').addEventListener('change',e=>{const t=e.target,k=t.dataset&&t.dataset
   for(const o of O){if(k==='m'){if(t.value)o.mat=t.value;else{delete o.mat;delete o.tmap;}}
     else{const tm={sc:(o.tmap&&o.tmap.sc)||1,rot:(o.tmap&&o.tmap.rot)||0};if(k==='sc')tm.sc=+t.value||1;else tm.rot=t.value==='1'?1:0;if(tm.sc!==1||tm.rot)o.tmap=tm;else delete o.tmap;}}
   refresh();pCtx();const N=MATN[S.keymap];msg(k==='m'?(t.value?`${N.cmd}: ${MATS[t.value].name} on ${plural(O.length,'object')}.`:`${N.cmd}: ${plural(O.length,'object')} back to ${N.none}.`):`Texture ${k==='sc'?'size':'direction'} changed on ${plural(O.length,'object')}.`);});
+
+// st24 (Ireny 2026-10-23): a slim floating view-control rail, and a one-row command bar whose output, history and options float
+// in an overlay so nothing the command line says can change the size of the view.
+{const st=document.createElement('style');st.textContent=`
+/* ---- view-control rail ---- */
+.viewport>.vbar{flex-wrap:nowrap;align-items:center;gap:8px;height:40px;min-height:40px;box-sizing:border-box;margin:6px 8px 4px;padding:0 6px;border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:0 1px 3px rgba(20,16,10,.06);overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;font-size:12px;flex:none}
+.viewport>.vbar::-webkit-scrollbar{height:4px}.viewport>.vbar::-webkit-scrollbar-thumb{background:var(--line);border-radius:2px}
+.viewport>.vbar>*{flex:none}
+.viewport>.vbar .seg{height:28px;align-items:stretch;border-radius:7px;padding:2px;gap:1px}
+.viewport>.vbar .seg button{padding:0 9px;font-size:12px;line-height:1;border-radius:5px;height:100%}
+.viewport>.vbar .fld{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--muted)}
+.viewport>.vbar .fld select,.viewport>.vbar .fld input[type=text]{height:28px;box-sizing:border-box;border-radius:7px;font-size:12px;padding-top:0;padding-bottom:0;color:var(--ink)}
+.viewport>.vbar .fld input[type=text]{width:84px}
+.viewport>.vbar .fld input[type=range]{width:96px}
+.viewport>.vbar #clipShowBtn{height:28px;box-sizing:border-box;border-radius:7px;padding:0 10px;font-size:12px;white-space:nowrap}
+.viewport>.vbar output{color:var(--ink);font-family:var(--f-mono);font-size:12px}
+.vrsp{flex:1 1 auto!important;min-width:4px}
+.vrmore{flex:none;width:28px;height:28px;border-radius:7px;border:1px solid var(--line);background:var(--panel);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.vrmore[hidden]{display:none}.vrmore svg{width:16px;height:16px;fill:currentColor}.vrmore[aria-expanded=true]{background:var(--panel-2)}
+.vrpan{position:fixed;z-index:40;display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:10px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 28px rgba(20,16,10,.16);font-size:12px;max-width:calc(100vw - 24px);max-height:70vh;overflow:auto;box-sizing:border-box}
+.vrpan[hidden]{display:none}
+.vrpan .seg{height:28px;align-items:stretch;border-radius:7px;padding:2px;gap:1px;flex-wrap:wrap}.vrpan .seg button{padding:0 9px;font-size:12px;border-radius:5px}
+.vrpan .fld{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;color:var(--muted)}
+.vrpan .fld select,.vrpan .fld input[type=text]{height:28px;box-sizing:border-box;border-radius:7px;font-size:12px;color:var(--ink)}.vrpan .fld input[type=text]{width:84px}
+.vrpan #clipShowBtn{height:28px;border-radius:7px;padding:0 10px;font-size:12px}.vrpan .vric{display:none}
+.viewport>.vbar{container-type:inline-size;container-name:vrail}
+.viewport>.vbar #clipSel{width:auto;max-width:150px}
+.viewport>.vbar #clipShowBtn span{white-space:nowrap}
+@container vrail (max-width:1280px){.viewport>.vbar #clipShowBtn span{display:none}.viewport>.vbar #clipShowBtn{padding:0 7px}}
+@container vrail (max-width:1120px){.viewport>.vbar .fld{font-size:0;gap:4px}.viewport>.vbar .fld>*{font-size:12px}.viewport>.vbar .fld>span[id$=Lbl]{display:none}.viewport>.vbar .fld input[type=range]{width:76px}}
+@container vrail (max-width:1280px){.viewport>.vbar #views button{padding:0 7px}}
+@container vrail (max-width:900px){.viewport>.vbar .vrview{max-width:150px}}
+@container vrail (max-width:1120px){.viewport>.vbar #clipSel{max-width:110px}.viewport>.vbar .fld input[type=range]{width:64px}}
+.viewport>.vbar .fld .vric{display:none;width:15px;height:15px;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+@container vrail (max-width:1120px){.viewport>.vbar .fld .vric{display:inline-block}}
+.vrview{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:7px;border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line));background:var(--accent-soft);color:var(--accent);font:600 12px var(--f-ui,system-ui);white-space:nowrap;cursor:pointer;max-width:260px}
+.vrview span{overflow:hidden;text-overflow:ellipsis}.vrview svg{width:12px;height:12px;flex:none;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.vrview:hover{border-color:var(--accent)}.vrview[hidden]{display:none}
+body.vr1 #vplabels .vplabel{display:none!important}
+/* ---- one-row command bar ---- */
+#cmdForm.cmd{flex-wrap:nowrap!important;align-items:center;gap:8px;height:40px;min-height:40px;max-height:40px;box-sizing:border-box;padding:0 6px 0 10px;row-gap:0;overflow:visible}
+#cmdForm.cmd.dock{margin:6px 8px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);box-shadow:0 1px 3px rgba(20,16,10,.06)}
+#cmdForm.cmd.dock.top{margin:6px 8px 0}
+#cmdForm .cpico{display:inline-flex;color:var(--muted);flex:none}#cmdForm .cpico svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#cmdForm .prompt{flex:none;text-transform:none;letter-spacing:0;font:600 12.5px var(--f-ui,system-ui);color:var(--accent)}
+#cmdForm>input#cmd{flex:1 1 220px;min-width:110px;width:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink)}
+#cmdForm>input#cmd::placeholder{color:var(--muted)}
+#cmdForm .cmdstat{flex:0 4 auto;min-width:0;max-width:52%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;border:0;border-left:1px solid var(--line);background:none;color:var(--muted);font:12px var(--f-ui,system-ui);padding:0 8px;height:22px;cursor:pointer;text-align:left}
+#cmdForm .cmdstat:hover{color:var(--ink)}#cmdForm .cmdstat[hidden]{display:none}
+#cmdForm .cmdstat.err{color:var(--warn)}
+#cmdForm .cbtns{display:inline-flex;gap:2px;flex:none;margin-left:auto}
+#cmdForm .cbtns button{width:28px;height:28px;border:0;border-radius:7px;background:none;color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+#cmdForm .cbtns button:hover,#cmdForm .cbtns button[aria-expanded=true]{background:var(--panel-2);color:var(--ink)}
+#cmdForm .cbtns svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#cmdForm .cbtns .cdot{position:absolute;width:6px;height:6px;border-radius:3px;background:var(--accent);transform:translate(8px,-8px)}
+/* everything that used to stack inside the bar now floats beside it */
+#cmdPop{position:absolute;left:0;right:0;bottom:calc(100% + 6px);display:flex;flex-direction:column;justify-content:flex-end;gap:6px;pointer-events:none;z-index:8;max-height:min(60vh,520px)}
+#cmdForm.top #cmdPop{bottom:auto;top:calc(100% + 6px);justify-content:flex-start}
+#cmdPop>*{pointer-events:auto;flex:none;max-width:100%;box-sizing:border-box}
+#cmdPop>#lrnCard{order:2}#cmdPop>#optBar{order:3}#cmdPop>.cpo{order:1}
+#cmdForm.top #cmdPop>#optBar{order:1}#cmdForm.top #cmdPop>#lrnCard{order:2}#cmdForm.top #cmdPop>.cpo{order:3}
+#cmdPop>#lrnCard[hidden],#cmdPop>#optBar[hidden],#cmdPop>.cpo[hidden]{display:none!important}
+/* a running command's options sit in the bar on one line, as in Rhino's command line; they scroll sideways if they don't fit */
+#cmdForm>#optBar{flex:0 4 auto!important;order:0!important;min-width:0;max-width:62%;height:28px;line-height:28px;white-space:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;border-left:1px solid var(--line);padding:0 8px;font-family:var(--f-mono);font-size:12.5px;color:var(--ink)}
+#cmdForm>#optBar::-webkit-scrollbar{display:none}#cmdForm>#optBar[hidden]{display:none!important}
+#cmdForm:has(>#optBar:not([hidden])) .cmdstat{display:none}
+#cmdPop>#lrnCard{flex:none!important;box-shadow:0 6px 18px rgba(20,16,10,.12);max-height:7em;overflow:auto}
+.cpo{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 28px rgba(20,16,10,.16);display:flex;flex-direction:column;min-height:0;width:min(640px,100%);font:12.5px/1.45 var(--f-ui,system-ui)}
+.cpo .cph{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);flex:none}
+.cpo .cph b{font-weight:700}.cpo .cph span{flex:1}
+.cpo .cph button{border:0;background:none;color:var(--muted);font:inherit;cursor:pointer;padding:2px 6px;border-radius:5px;text-transform:none;letter-spacing:0;font-size:12px}
+.cpo .cph button:hover{background:var(--panel-2);color:var(--ink)}
+.cpo .cpb{overflow-y:auto;overflow-x:hidden;min-height:0;max-height:min(42vh,340px);padding:4px 0;overscroll-behavior:contain}
+.cplog .ce{padding:4px 12px;overflow-wrap:anywhere;white-space:normal}
+.cplog .ce.c{font-family:var(--f-mono);color:var(--accent);padding-bottom:0}
+.cplog .ce.c::before{content:"› ";color:var(--muted)}
+.cplog .ce.m{color:var(--muted)}
+.cplog .ce em{font-style:normal;color:#a35a00}
+#cmdLog #cmdMsg,#cmdForm #cmdLog output#cmdMsg,.cmd.dock #cmdLog output#cmdMsg{display:block!important;position:static;flex:none!important;height:auto!important;min-height:0!important;max-height:none!important;overflow:visible!important;white-space:normal!important;padding:4px 12px!important;border:0!important;color:var(--ink)!important;font:12.5px/1.45 var(--f-ui,system-ui)!important;order:0!important;max-width:none!important}
+#cmdLog #cmdMsg:empty{display:none!important}
+.cphist li{display:flex;gap:10px;align-items:baseline;padding:4px 12px;cursor:pointer;font-family:var(--f-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cphist ul{list-style:none;margin:0;padding:0}.cphist li:hover,.cphist li.on{background:var(--accent-soft)}
+.cphist li small{margin-left:auto;color:var(--muted);font-family:var(--f-ui,system-ui)}
+.cpmenu{width:min(300px,100%);align-self:flex-end}
+.cpmenu .cpb{padding:4px}
+.cpmenu label,.cpmenu button.mi{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:0;background:none;border-radius:6px;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.cpmenu label:hover,.cpmenu button.mi:hover{background:var(--panel-2)}
+.cpempty{padding:8px 12px;color:var(--muted)}
+#cmdForm .acl{max-width:100%}
+#cmdForm .acl li .d{max-width:100%}
+`;document.head.appendChild(st);}
+// ---------- rail ----------
+const VBAR=document.querySelector('.viewport>.vbar');
+const vrB=document.createElement('button');vrB.type='button';vrB.id='vrView';vrB.className='vrview';vrB.setAttribute('aria-haspopup','menu');
+if(VBAR){VBAR.prepend(vrB);const cl=$('#clipSel');const lab=cl&&cl.closest('label');if(lab&&lab.parentElement===VBAR){const sp=document.createElement('span');sp.className='vrsp';lab.before(sp);}}
+function vrSync(){try{if(!AV){vrB.hidden=true;return;}vrB.hidden=false;const t=`${vpTitle(AV)} · ${modeName(AV.mode)}`;
+  if(vrB.dataset.t!==t){vrB.dataset.t=t;vrB.innerHTML=`<span>${esc(t)}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;}
+  vrB.title=`Views and ${String((UI[S.keymap]||{}).mode||'display mode').toLowerCase()} for the ${S.layout==='4'?'active ':''}view`;
+  document.body.classList.toggle('vr1',S.layout!=='4');}catch(e){}}
+vrB.addEventListener('click',e=>{e.stopPropagation();try{axoOpen(vrB,AV,true);}catch(x){}});
+{const _lv=labelVPs;labelVPs=function(){const r=_lv.apply(this,arguments);vrSync();return r;};}
+{const VRI={clipSel:'<path d="M3 12h18"/><path d="M6 8l6-4 6 4M6 16l6 4 6-4"/>',height:'<path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>'};
+  Object.keys(VRI).forEach(id=>{const c=$('#'+id),l=c&&c.closest('.vbar .fld');if(!l)return;l.insertAdjacentHTML('afterbegin',`<svg class="vric" viewBox="0 0 24 24" aria-hidden="true">${VRI[id]}</svg>`);
+    const t=()=>{const tx=[...l.childNodes].filter(n=>n.nodeType===3||(n.id&&/Lbl$/.test(n.id))).map(n=>n.textContent).join(' ').replace(/\s+/g,' ').trim();if(tx)l.title=tx;};t();new MutationObserver(t).observe(l,{childList:true,subtree:true,characterData:true});});}
+// controls that don't fit the rail move, in order, into a small panel under a ⋯ button (same elements, same handlers)
+const vrMore=document.createElement('button');vrMore.type='button';vrMore.className='vrmore';vrMore.id='vrMore';vrMore.hidden=true;vrMore.setAttribute('aria-label','More view controls');vrMore.setAttribute('aria-expanded','false');vrMore.title='More view controls';
+vrMore.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+const vrPan=document.createElement('div');vrPan.className='vrpan';vrPan.id='vrPan';vrPan.hidden=true;vrPan.setAttribute('role','group');vrPan.setAttribute('aria-label','More view controls');document.body.appendChild(vrPan);
+const VRM=[];if(VBAR){VBAR.appendChild(vrMore);const lab=id=>{const e=$('#'+id);return e&&(e.closest('.fld')||e);};
+  [$('#views'),lab('sun'),lab('height'),$('#clipShowBtn'),lab('clipSel'),$('#layout')].forEach(el=>{if(el&&el.parentElement===VBAR){const m=document.createComment('vr');el.before(m);VRM.push({el,m});}});}
+let vrBusy=false;
+function vrPlace(){if(vrPan.hidden)return;const r=vrMore.getBoundingClientRect(),w=vrPan.offsetWidth;vrPan.style.left=Math.max(12,Math.min(innerWidth-w-12,r.right-w))+'px';vrPan.style.top=(r.bottom+6)+'px';}
+function vrFit(){if(!VBAR||vrBusy)return;vrBusy=true;try{
+  VRM.forEach(({el,m})=>{if(el.parentElement!==VBAR)m.after(el);});vrMore.hidden=true;
+  if(VBAR.scrollWidth>VBAR.clientWidth+1){vrMore.hidden=false;
+    for(const {el} of VRM){if(VBAR.scrollWidth<=VBAR.clientWidth+1)break;if(!el.offsetWidth)continue;vrPan.appendChild(el);}
+    [...vrPan.children].sort((a,b)=>VRM.findIndex(x=>x.el===a)-VRM.findIndex(x=>x.el===b)).reverse().forEach(e=>vrPan.prepend(e));}
+  if(vrMore.hidden||!vrPan.children.length){vrPan.hidden=true;vrMore.hidden=!vrPan.children.length;vrMore.setAttribute('aria-expanded','false');}
+  vrPlace();}finally{vrBusy=false;}}
+vrMore.addEventListener('click',e=>{e.stopPropagation();vrPan.hidden=!vrPan.hidden;vrMore.setAttribute('aria-expanded',!vrPan.hidden);vrPlace();});
+document.addEventListener('pointerdown',e=>{if(!vrPan.hidden&&!e.target.closest('#vrPan,#vrMore'))vrPan.hidden=true,vrMore.setAttribute('aria-expanded','false');},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!vrPan.hidden){vrPan.hidden=true;vrMore.setAttribute('aria-expanded','false');}},true);
+addEventListener('resize',()=>{clearTimeout(vrFit.t);vrFit.t=setTimeout(vrFit,40);});
+new MutationObserver(()=>{clearTimeout(vrFit.t);vrFit.t=setTimeout(vrFit,40);}).observe(document.body,{attributes:true,attributeFilter:['data-lay','data-style','class']});
+if(VBAR){new ResizeObserver(()=>{clearTimeout(vrFit.t);vrFit.t=setTimeout(vrFit,20);}).observe(VBAR);const vrOwn=r=>(r.type==='attributes'&&(r.target===VBAR||r.target===vrMore))||(r.type==='childList'&&r.target===VBAR&&[...r.addedNodes,...r.removedNodes].every(n=>VRM.some(x=>x.el===n)));
+new MutationObserver(rs=>{if(vrBusy||rs.every(vrOwn))return;clearTimeout(vrFit.t);vrFit.t=setTimeout(vrFit,30);}).observe(VBAR,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','style','class'],characterData:true});}
+vrSync();
+// ---------- command bar ----------
+const CF=$('#cmdForm');
+const CPI={term:'<path d="M4 7l5 5-5 5"/><path d="M12 18h8"/>',down:'<path d="M6 9l6 6 6-6"/>',hist:'<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/>',menu:'<path d="M4 7h16M4 12h16M4 17h16"/>'};
+const cpSvg=k=>`<svg viewBox="0 0 24 24" aria-hidden="true">${CPI[k]}</svg>`;
+{const ic=document.createElement('span');ic.className='cpico';ic.innerHTML=cpSvg('term');CF.querySelector('.prompt').before(ic);}
+const cmdStat=document.createElement('button');cmdStat.type='button';cmdStat.className='cmdstat';cmdStat.id='cmdStat';cmdStat.hidden=true;
+$('#acGhost').after(cmdStat);
+const CBT=document.createElement('span');CBT.className='cbtns';
+CBT.innerHTML=`<button type="button" id="cpOutB" aria-label="Command output" title="Command output (F2)" aria-expanded="false" aria-controls="cpOut">${cpSvg('down')}</button><button type="button" id="cpHistB" aria-label="Command history" title="Command history (↑ in the command line steps back)" aria-expanded="false" aria-controls="cpHist">${cpSvg('hist')}</button><button type="button" id="cpMenuB" aria-label="Command line options" title="Command line options" aria-expanded="false" aria-controls="cpMenu">${cpSvg('menu')}</button>`;
+CF.appendChild(CBT);
+const cmdPop=document.createElement('div');cmdPop.id='cmdPop';CF.appendChild(cmdPop);
+cmdPop.append($('#lrnCard'));cmdStat.after($('#optBar'));
+cmdPop.insertAdjacentHTML('beforeend',`<div class="cpo cpout" id="cpOut" role="log" aria-label="Command output" hidden><div class="cph"><b>Output</b><span></span><button type="button" data-cp="copy">Copy</button><button type="button" data-cp="clear">Clear</button><button type="button" data-cp="x" aria-label="Close">✕</button></div><div class="cpb cplog" id="cmdLog"></div></div>
+<div class="cpo cphist" id="cpHist" hidden><div class="cph"><b>History</b><span></span><button type="button" data-cp="hclear">Clear</button><button type="button" data-cp="x" aria-label="Close">✕</button></div><div class="cpb"><ul id="cpHistL" role="listbox" aria-label="Commands typed"></ul></div></div>
+<div class="cpo cpmenu" id="cpMenu" hidden><div class="cpb">
+<label><input type="checkbox" id="cpAuto"> Open the output for long messages</label>
+<label><input type="checkbox" id="cpAc"> Suggestions while typing</label>
+<button type="button" class="mi" data-cp="out">Show all output</button><button type="button" class="mi" data-cp="hist">Show command history</button><button type="button" class="mi" data-cp="clear">Clear output</button></div></div>`);
+const cmdLog=$('#cmdLog');cmdLog.appendChild(cmdMsg);
+const CLOG=[];let CLPREV='';let cpTm=0;const CP={open:'',pin:false};
+const CHIST=(()=>{try{const a=JSON.parse(localStorage.getItem('s2b-cmdhist')||'[]');return Array.isArray(a)?a.slice(-100):[];}catch(e){return[];}})();
+let chI=-1,chDraft='';
+function cpPanel(k){return k==='out'?$('#cpOut'):k==='hist'?$('#cpHist'):$('#cpMenu');}
+function cpShow(k,pin){['out','hist','menu'].forEach(x=>{const on=x===k;cpPanel(x).hidden=!on;const b=$(x==='out'?'#cpOutB':x==='hist'?'#cpHistB':'#cpMenuB');if(b)b.setAttribute('aria-expanded',on);});
+  CP.open=k||'';CP.pin=!!pin;clearTimeout(cpTm);
+  if(k==='out')requestAnimationFrame(()=>{const b=$('#cpOut .cpb');b.scrollTop=b.scrollHeight;});
+  if(k==='hist')cpHistRender();if(k==='menu'){$('#cpAuto').checked=PRF.cmdAuto!==false;$('#cpAc').checked=S.ac!==false;}}
+function cpHide(){cpShow('');}
+function cpLogRender(){const old=CLOG.map(e=>`<div class="ce ${e.k}">${e.k==='c'?esc(e.h):e.h}</div>`).join('');
+  [...cmdLog.querySelectorAll('.ce')].forEach(n=>n.remove());cmdMsg.insertAdjacentHTML('beforebegin',old);
+  if(!CLOG.length&&!cmdMsg.textContent.trim()){if(!cmdLog.querySelector('.cpempty'))cmdMsg.insertAdjacentHTML('beforebegin','<div class="cpempty">Nothing yet. What the command line says shows here.</div>');}else{const e=cmdLog.querySelector('.cpempty');if(e)e.remove();}}
+function cpPush(k,h){if(!h)return;const l=CLOG[CLOG.length-1];if(l&&l.k===k&&l.h===h)return;CLOG.push({k,h});if(CLOG.length>400)CLOG.splice(0,CLOG.length-400);}
+function cpStat(){const t=cmdMsg.textContent.replace(/\s+/g,' ').trim();cmdStat.hidden=!t;cmdStat.textContent=t;cmdStat.title=t?t+' (click for the full output)':'';
+  cmdStat.classList.toggle('err',/^(something went wrong|error|can't|cannot|nothing )/i.test(t));}
+new MutationObserver(()=>{const h=cmdMsg.innerHTML.trim();if(h===CLPREV)return;if(CLPREV)cpPush('m',CLPREV);CLPREV=h;cpLogRender();cpStat();
+  if(CP.open==='out'){const b=$('#cpOut .cpb');b.scrollTop=b.scrollHeight;return;}
+  if(!h||PRF.cmdAuto===false||CP.open)return;
+  const long=!!cmdMsg.querySelector('a,button,[data-how],ul,ol,table')||(cmdMsg.textContent.length>200&&cmdStat.scrollWidth>cmdStat.clientWidth+2);
+  if(long&&CF.offsetParent){cpShow('out',false);cpTm=setTimeout(()=>{if(CP.open==='out'&&!CP.pin&&!$('#cpOut').matches(':hover'))cpHide();},7000);}}).observe(cmdMsg,{childList:true,subtree:true,characterData:true});
+$('#cpOut').addEventListener('mouseleave',()=>{if(CP.open==='out'&&!CP.pin){clearTimeout(cpTm);cpTm=setTimeout(()=>{if(!CP.pin&&!$('#cpOut').matches(':hover'))cpHide();},2500);}});
+cmdLog.addEventListener('click',e=>{const a=e.target.closest('.ce [data-how]');if(!a)return;e.preventDefault();howOpen(a.dataset.how);});
+cmdStat.addEventListener('click',()=>{if(CP.open==='out'&&CP.pin)cpHide();else cpShow('out',true);});
+$('#cpOutB').addEventListener('click',()=>{if(CP.open==='out'&&CP.pin)cpHide();else cpShow('out',true);});
+$('#cpHistB').addEventListener('click',()=>{if(CP.open==='hist')cpHide();else cpShow('hist',true);});
+$('#cpMenuB').addEventListener('click',()=>{if(CP.open==='menu')cpHide();else cpShow('menu',true);});
+cmdPop.addEventListener('click',e=>{const b=e.target.closest('[data-cp]');if(!b)return;const a=b.dataset.cp;
+  if(a==='x')cpHide();else if(a==='out')cpShow('out',true);else if(a==='hist')cpShow('hist',true);
+  else if(a==='clear'){CLOG.length=0;CLPREV=cmdMsg.innerHTML.trim();cpLogRender();if(CP.open==='menu')cpShow('out',true);}
+  else if(a==='hclear'){CHIST.length=0;cpHistSave();cpHistRender();}
+  else if(a==='copy'){const t=[...cmdLog.children].map(n=>n.textContent.trim()).filter(Boolean).join('\n');try{navigator.clipboard.writeText(t);b.textContent='Copied';setTimeout(()=>{b.textContent='Copy';},1200);}catch(x){}}});
+$('#cpAuto').addEventListener('change',e=>{PRF.cmdAuto=e.target.checked;prfSave();});
+$('#cpAc').addEventListener('change',e=>{S.ac=e.target.checked;if(!S.ac)try{acHide();}catch(x){}try{save();}catch(x){}});
+document.addEventListener('pointerdown',e=>{if(!CP.open)return;if(e.target.closest('#cmdPop,#cmdForm .cbtns,#cmdStat'))return;cpHide();},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&CP.open){cpHide();}else if(e.key==='F2'&&!e.repeat){e.preventDefault();if(CP.open==='out')cpHide();else cpShow('out',true);}},true);
+// history of what was typed: the clock button lists it, ↑/↓ step through it in the command line
+function cpHistSave(){try{localStorage.setItem('s2b-cmdhist',JSON.stringify(CHIST.slice(-100)));}catch(e){}}
+function cpHistRender(){const L=$('#cpHistL');if(!CHIST.length){L.innerHTML='<li class="cpempty" style="cursor:default">No commands typed yet.</li>';return;}
+  L.innerHTML=CHIST.map((c,i)=>`<li role="option" data-i="${i}" title="Click to put it in the command line, double-click to run it">${esc(c)}</li>`).join('');
+  requestAnimationFrame(()=>{const b=$('#cpHist .cpb');b.scrollTop=b.scrollHeight;});}
+$('#cpHistL').addEventListener('click',e=>{const li=e.target.closest('li[data-i]');if(!li)return;cmdIn.value=CHIST[+li.dataset.i];cmdIn.focus();});
+$('#cpHistL').addEventListener('dblclick',e=>{const li=e.target.closest('li[data-i]');if(!li)return;cpHide();run(CHIST[+li.dataset.i]);});
+{const _rn=run;run=function(raw){const t=String(raw==null?'':raw).trim();if(t&&!/^[\d\s.,'"\-+*/@<>=]+$/.test(t)){if(CHIST[CHIST.length-1]!==t){CHIST.push(t);if(CHIST.length>100)CHIST.shift();cpHistSave();}}
+  if(t){cpPush('c',t);cpLogRender();}chI=-1;if(CP.open&&CP.open!=='out'&&!CP.pin)cpHide();if(CP.open==='hist')cpHide();return _rn.apply(this,arguments);};}
+cmdIn.addEventListener('keydown',e=>{if((e.key!=='ArrowUp'&&e.key!=='ArrowDown')||e.defaultPrevented||!$('#acList').hidden||!CHIST.length)return;
+  e.preventDefault();if(chI<0){chDraft=cmdIn.value;chI=CHIST.length;}chI=Math.max(0,Math.min(CHIST.length,chI+(e.key==='ArrowUp'?-1:1)));
+  cmdIn.value=chI>=CHIST.length?chDraft:CHIST[chI];if(chI>=CHIST.length)chI=-1;const n=cmdIn.value.length;try{cmdIn.setSelectionRange(n,n);}catch(x){}});
+cpLogRender();cpStat();
+
 </script>
 
 </html>
