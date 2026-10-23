@@ -13743,9 +13743,13 @@ function vrFloat(){if(!VBAR)return;const vp=$('#vp'),vw=VBAR.parentElement;const
   vp.style.setProperty('--vrh',(VBAR.offsetHeight+8)+'px');}
 {const _f=vrFit;vrFit=function(){vrFloat();return _f.apply(this,arguments);};}
 {const _lv=labelVPs;labelVPs=function(){const r=_lv.apply(this,arguments);try{const on=VPS.filter(x=>x.on);labelBox.querySelectorAll('.vplabel').forEach((b,i)=>{const v=on[i];b.classList.toggle('vrtop',!!v&&v.y<4);});}catch(e){}return r;};}
+// the active view's outline: same 2px on every side. Edges that face another view cover the divider gap, so the dark gap doesn't sit next to the brown line and make it look thicker there
+{const _lv=labelVPs;labelVPs=function(){const r=_lv.apply(this,arguments);try{const f=labelBox.querySelector('.vpframe.on'),v=AV;if(f&&v){const o=VPS.filter(x=>x.on&&x!==v),ov=(a0,a1,b0,b1)=>a0<b1&&b0<a1;
+  let l=0,t=0,rr=0,b=0;for(const x of o){if(ov(v.y,v.y+v.h,x.y,x.y+x.h)){const gl=v.x-(x.x+x.w),gr=x.x-(v.x+v.w);if(gl>=0&&gl<=6)l=Math.max(l,gl);if(gr>=0&&gr<=6)rr=Math.max(rr,gr);}
+    if(ov(v.x,v.x+v.w,x.x,x.x+x.w)){const gt=v.y-(x.y+x.h),gb=x.y-(v.y+v.h);if(gt>=0&&gt<=6)t=Math.max(t,gt);if(gb>=0&&gb<=6)b=Math.max(b,gb);}}
+  Object.assign(f.style,{left:(v.x-l)+'px',top:(v.y-t)+'px',width:(v.w+l+rr)+'px',height:(v.h+t+b)+'px'});
+  f.style.outline='none';f.style.boxShadow=`inset ${l?l:2}px ${t?t:2}px 0 0 var(--accent), inset -${rr?rr:2}px -${b?b:2}px 0 0 var(--accent)`;f.style.zIndex='1';}}catch(e){}return r;};}
 if($('#vp'))new ResizeObserver(()=>{vrFloat();}).observe($('#vp'));
 vrFloat();try{labelVPs();}catch(e){}
 
 </script>
-
-</html>
