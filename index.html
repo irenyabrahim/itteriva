@@ -13717,6 +13717,33 @@ cmdIn.addEventListener('keydown',e=>{if((e.key!=='ArrowUp'&&e.key!=='ArrowDown')
   e.preventDefault();if(chI<0){chDraft=cmdIn.value;chI=CHIST.length;}chI=Math.max(0,Math.min(CHIST.length,chI+(e.key==='ArrowUp'?-1:1)));
   cmdIn.value=chI>=CHIST.length?chDraft:CHIST[chI];if(chI>=CHIST.length)chI=-1;const n=cmdIn.value.length;try{cmdIn.setSelectionRange(n,n);}catch(x){}});
 cpLogRender();cpStat();
+// the rail floats over the 3D view (Ireny: like the reference render), so the view runs under it
+{const st=document.createElement('style');st.textContent=`
+.viewport{position:relative}
+body.vrfl .viewport>.vbar{position:absolute;z-index:9;margin:0;left:var(--vrl,10px);right:var(--vrr,10px);top:var(--vrt,10px);background:transparent;border:0;box-shadow:none;padding:0;overflow-x:auto;overflow-y:visible}
+/* no bar behind them: each control is its own small floating pill, labels sit on the view */
+body.vrfl .viewport>.vbar .seg,body.vrfl .viewport>.vbar select,body.vrfl .viewport>.vbar input[type=text],body.vrfl .viewport>.vbar #clipShowBtn,body.vrfl .viewport>.vbar .vrmore{background:color-mix(in srgb,var(--panel) 94%,transparent);border:1px solid color-mix(in srgb,var(--line) 80%,transparent);box-shadow:0 1px 3px rgba(20,16,10,.10)}
+body.vrfl .viewport>.vbar .vrview{box-shadow:0 1px 3px rgba(20,16,10,.10)}
+body.vrfl .viewport>.vbar .fld{color:var(--ink);background:color-mix(in srgb,var(--panel) 62%,transparent);border-radius:8px;padding:0 0 0 8px;height:30px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+body.vrfl .viewport>.vbar .fld:has(output){padding-right:8px}
+body.vrfl .viewport>.vbar .fld:has(#heightU){padding-right:8px}
+body.vrfl .viewport>.vbar .fld .vric{stroke:var(--ink)}
+
+body.vrfl .viewport>.vbar{height:36px;min-height:36px;pointer-events:none}body.vrfl .viewport>.vbar>*{pointer-events:auto}
+body.vrfl #vp>.howbtn,body.vrfl #vp>.lpan:not([data-dock=bottom]){margin-top:var(--vrh,0px)}
+body.vrfl #vp>.lpan:not([data-dock=bottom]){max-height:calc(100% - 16px - var(--vrh,0px))}
+body.vrfl #vplabels .vplabel.vrtop{margin-top:var(--vrh,0px)}
+/* Ireny: the tip box (e.g. EXAMPLE STUDIO, hover for tips) sits at the bottom right of the view and opens upward */
+#vp>.hint{top:auto!important;left:auto!important;right:10px;bottom:10px;margin:0!important;max-width:min(420px,calc(100% - 20px))}
+#vp:has(>#cmdForm:not(.dock)) .hint{bottom:62px}`;document.head.appendChild(st);}
+function vrFloat(){if(!VBAR)return;const vp=$('#vp'),vw=VBAR.parentElement;const on=getComputedStyle(VBAR).display!=='none'&&!!vp&&vp.offsetParent!==null&&vw.contains(vp);
+  document.body.classList.toggle('vrfl',on);if(!on){vp&&vp.style.removeProperty('--vrh');return;}
+  const pr=vw.getBoundingClientRect(),r=vp.getBoundingClientRect();vw.style.setProperty('--vrt',(r.top-pr.top+8)+'px');vw.style.setProperty('--vrl',(r.left-pr.left+8)+'px');vw.style.setProperty('--vrr',(pr.right-r.right+8)+'px');
+  vp.style.setProperty('--vrh',(VBAR.offsetHeight+8)+'px');}
+{const _f=vrFit;vrFit=function(){vrFloat();return _f.apply(this,arguments);};}
+{const _lv=labelVPs;labelVPs=function(){const r=_lv.apply(this,arguments);try{const on=VPS.filter(x=>x.on);labelBox.querySelectorAll('.vplabel').forEach((b,i)=>{const v=on[i];b.classList.toggle('vrtop',!!v&&v.y<4);});}catch(e){}return r;};}
+if($('#vp'))new ResizeObserver(()=>{vrFloat();}).observe($('#vp'));
+vrFloat();try{labelVPs();}catch(e){}
 
 </script>
 
