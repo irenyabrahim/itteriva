@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Sketch to Building</title>
+<title>Itteriva</title><!-- v105b st22 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&family=Architects+Daughter&display=swap">
 <style>
@@ -29,6 +29,7 @@ button,input,select{font:inherit;color:inherit}
 .top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:10px}
 .brand b{font-family:var(--f-display);font-weight:600;font-size:19px;letter-spacing:.01em}
+.brand .wmk{display:block;height:19px;width:auto;fill:currentColor;overflow:visible}.top .brand .wmk{height:21px}
 .mark{width:22px;height:22px;border:2.5px solid var(--ink);border-radius:2px;position:relative}
 .mark::after{content:"";position:absolute;inset:4px 4px 0 auto;width:6px;border-left:2.5px solid var(--ink);border-top:2.5px solid var(--ink)}
 .tag{font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);border:1px solid var(--line);padding:2px 6px;border-radius:4px}
@@ -1549,7 +1550,7 @@ body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padd
 </style>
 
 <header class="top">
-  <div class="brand"><span class="mark" aria-hidden="true"></span><b>Sketch to Building</b></div>
+  <div class="brand"><b><svg class="wmk" viewBox="-1 -1 158 38" role="img" aria-label="Itteriva"><title>Itteriva</title><rect x="0" y="0" width="2" height="36"/><rect x="4" y="0" width="34" height="2"/><rect x="24" y="0" width="2" height="36"/><rect x="36" y="0" width="2" height="12"/><polygon points="36,10 137.9,10 137.3,12 36,12"/><rect x="48" y="10" width="2" height="26"/><text x="70" y="36" textLength="56" lengthAdjust="spacing" font-size="24" font-weight="300">ERIV</text><polygon points="143,0 145,0 134,36 132,36"/><polygon points="143,0 145,0 156,36 154,36"/></svg></b></div>
   <button type="button" class="projbtn" id="projBtn" aria-haspopup="dialog" title="Project: name, New, Open, Save (Ctrl+S) and the projects kept in this browser"><span id="projName">Untitled project</span></button>
   <span class="saved" title="Your work is kept in this browser on this device.">Saved on this device</span>
   <div class="seg wsw" id="wsw" role="group" aria-label="Workspace"><button type="button" data-w="model" aria-pressed="true">Model</button><button type="button" data-w="draw" aria-pressed="false">Drawings</button></div>
@@ -1951,7 +1952,7 @@ body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padd
 </div></dialog>
 <dialog id="wlcDlg" aria-labelledby="wlcT1">
   <div class="dlg wlc"><button type="button" class="wlcx" id="wlcX" aria-label="Close" title="Close (Esc). Keeps the current settings; type WELCOME to open this again.">×</button>
-    <p class="wlck"><span>Welcome to Sketch to Building</span><span>Three quick choices. Each one can be changed later on its own, from the top bar or by typing WELCOME.</span></p>
+    <p class="wlck"><span>Welcome to Itteriva</span><span>Three quick choices. Each one can be changed later on its own, from the top bar or by typing WELCOME.</span></p>
     <h3 id="wlcT1"><span class="wn">1</span>Which program do you already know?</h3>
     <p>Pick every program you know. We open with the shortcuts, mouse and command names of the main one, and commands from the others work too.</p>
     <div class="wlcgrid" id="wlcKnow" role="group" aria-labelledby="wlcT1"></div><div class="wlcmain" id="wlcMain" hidden></div>
@@ -8227,7 +8228,7 @@ function chains(lines){// join line segments into polylines where they meet end 
   const segs=[];for(let k=0;k<lines.length;k+=6)segs.push([[lines[k],lines[k+1],lines[k+2]],[lines[k+3],lines[k+4],lines[k+5]]]);const out=[];let cur=null;const eq=(a,b)=>Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2])<1e-7;
   for(const[a,b]of segs){if(cur&&eq(cur[cur.length-1],a))cur.push(b);else{cur=[a,b];out.push(cur);}}return out;}
 
-function writeOBJ(M,base){const mats=new Map(),o=[`# ${base} from Sketch to Building (meters, Y up)`,`mtllib ${base}.mtl`];let vi=1;
+function writeOBJ(M,base){const mats=new Map(),o=[`# ${base} from Itteriva (meters, Y up)`,`mtllib ${base}.mtl`];let vi=1;
   const mat=c=>{c=c||'#c9d9ee';if(!mats.has(c))mats.set(c,'m_'+c.slice(1));return mats.get(c);};
   const byL=new Map();for(const it of M.objs){if(!byL.has(it.layer))byL.set(it.layer,[]);byL.get(it.layer).push(it);}
   for(const L of M.layers){const its=byL.get(L.id)||[];if(!its.length)continue;
@@ -8237,10 +8238,10 @@ function writeOBJ(M,base){const mats=new Map(),o=[`# ${base} from Sketch to Buil
   const mtl=[...mats].map(([c,n])=>{const C=new THREE.Color(c);return`newmtl ${n}\nKd ${n6(C.r)} ${n6(C.g)} ${n6(C.b)}\nKa 0 0 0\nd 1\nillum 1`;}).join('\n\n');
   return[[base+'.obj',o.join('\n')+'\n'],[base+'.mtl',mtl+'\n']];}
 function writeSTL(M){const tris=M.objs.flatMap(it=>[it.tri]),n=tris.reduce((a,t)=>a+t.length/9,0),buf=new ArrayBuffer(84+n*50),dv=new DataView(buf);
-  const hd='Sketch to Building, millimeters, Z up';for(let k=0;k<hd.length;k++)dv.setUint8(k,hd.charCodeAt(k));dv.setUint32(80,n,true);let o=84;
+  const hd='Itteriva, millimeters, Z up';for(let k=0;k<hd.length;k++)dv.setUint8(k,hd.charCodeAt(k));dv.setUint32(80,n,true);let o=84;
   for(const T of tris)for(let k=0;k<T.length;k+=9){const P=[0,3,6].map(j=>zup(T[k+j],T[k+j+1],T[k+j+2],1000));const u=[P[1][0]-P[0][0],P[1][1]-P[0][1],P[1][2]-P[0][2]],w=[P[2][0]-P[0][0],P[2][1]-P[0][1],P[2][2]-P[0][2]];
     const nn=[u[1]*w[2]-u[2]*w[1],u[2]*w[0]-u[0]*w[2],u[0]*w[1]-u[1]*w[0]],L=Math.hypot(...nn)||1;[...nn.map(x=>x/L),...P[0],...P[1],...P[2]].forEach((x,j)=>dv.setFloat32(o+j*4,x,true));o+=50;}return new Uint8Array(buf);}
-async function writeGLB(M){await loadLib('GLTFExporter.js');const root=new THREE.Group();root.name='Sketch to Building';const grp=new Map();
+async function writeGLB(M){await loadLib('GLTFExporter.js');const root=new THREE.Group();root.name='Itteriva';const grp=new Map();
   for(const L of M.layers){const g=new THREE.Group();g.name=L.path;g.visible=L.on;g.userData={layer:L.path,color:L.color,on:L.on};grp.set(L.id,g);root.add(g);}
   for(const it of M.objs){const L=M.layers.find(l=>l.id===it.layer);const col=it.col||(L&&L.color)||'#c9d9ee';
     if(it.tri.length){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(it.tri,3));g.computeVertexNormals();const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:col,roughness:0.85,side:THREE.DoubleSide}));m.name=it.name;m.userData={layer:L&&L.path};grp.get(it.layer).add(m);}
@@ -8259,7 +8260,7 @@ function writeDAE(M){const cols=new Map(),geo=[],nodes=new Map();const cid=c=>{i
   const mats=[...cols].map(([c,i])=>`<material id="m${i}" name="${c.slice(1)}"><instance_effect url="#e${i}"/></material>`).join('');
   const layerList=M.layers.map(L=>`<layer name="${xmlEsc(L.path)}">${[...nodes.get(L.id)||[]].map((_,k)=>'').join('')}</layer>`).join('');
   const vs=M.layers.filter(L=>nodes.has(L.id)).map(L=>`<node id="L${L.id}" name="${xmlEsc(L.path)}" layer="${xmlEsc(L.path)}">${nodes.get(L.id).join('')}</node>`).join('');
-  return`<?xml version="1.0" encoding="utf-8"?>\n<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1"><asset><contributor><authoring_tool>Sketch to Building</authoring_tool></contributor><unit name="meter" meter="1"/><up_axis>Z_UP</up_axis></asset><library_effects>${eff}</library_effects><library_materials>${mats}</library_materials><library_geometries>${geo.join('')}</library_geometries><library_visual_scenes><visual_scene id="scene" name="Sketch to Building">${vs}<extra><technique profile="GOOGLEEARTH">${layerList}</technique></extra></visual_scene></library_visual_scenes><scene><instance_visual_scene url="#scene"/></scene></COLLADA>\n`;}
+  return`<?xml version="1.0" encoding="utf-8"?>\n<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1"><asset><contributor><authoring_tool>Itteriva</authoring_tool></contributor><unit name="meter" meter="1"/><up_axis>Z_UP</up_axis></asset><library_effects>${eff}</library_effects><library_materials>${mats}</library_materials><library_geometries>${geo.join('')}</library_geometries><library_visual_scenes><visual_scene id="scene" name="Itteriva">${vs}<extra><technique profile="GOOGLEEARTH">${layerList}</technique></extra></visual_scene></library_visual_scenes><scene><instance_visual_scene url="#scene"/></scene></COLLADA>\n`;}
 // DXF R12: readable by every AutoCAD and most CAD programs; layers keep names (made DXF-safe), colors, on/off and locks
 function dxfNames(M){const used=new Set(['0']),out=new Map();for(const L of M.layers){let n=L.path.toUpperCase().replace(/::/g,'$').replace(/[^A-Z0-9_$-]+/g,'_').slice(0,31)||'LAYER';
     if(L.id==='L0')n='0';let k=1,b=n;while(used.has(n)&&L.id!=='L0')n=(b.slice(0,28)+'_'+(++k));used.add(n);out.set(L.id,n);}return out;}
@@ -8318,7 +8319,7 @@ function writeIFC(M,name){const L=[];let n=0;const E=t=>{L.push(`#${++n}=${t};`)
   if(els.length)E(`IFCRELCONTAINEDINSPATIALSTRUCTURE(${gid()},$,$,$,(${els.join(',')}),${sto})`);
   for(const[lid,reps]of layerReps){const Ly=M.layers.find(l=>l.id===lid);E(`IFCPRESENTATIONLAYERASSIGNMENT(${S_(Ly?Ly.path:'Default')},$,(${reps.join(',')}),$)`);}
   const now=new Date().toISOString().slice(0,19);
-  return`ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('ViewDefinition [ReferenceView_V1.2]'),'2;1');\nFILE_NAME(${S_(name+'.ifc')},'${now}',(''),(''),'Sketch to Building','Sketch to Building prototype','');\nFILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\n${L.join('\n')}\nENDSEC;\nEND-ISO-10303-21;\n`;}
+  return`ISO-10303-21;\nHEADER;\nFILE_DESCRIPTION(('ViewDefinition [ReferenceView_V1.2]'),'2;1');\nFILE_NAME(${S_(name+'.ifc')},'${now}',(''),(''),'Itteriva','Itteriva prototype','');\nFILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\n${L.join('\n')}\nENDSEC;\nEND-ISO-10303-21;\n`;}
 function projectJSON(){const geo={};for(const s of S.solids)if(s.kind==='mesh'&&GEO.has(s.geo)&&!geo[s.geo]){const G=GEO.get(s.geo),g={};for(const k of['p','l','c','uv'])if(G[k])g[k]=b64(new Uint8Array(G[k].buffer,G[k].byteOffset,G[k].byteLength));if(G.img)g.img=G.img;geo[s.geo]=g;}
   const used=new Set([...(S.ent||[]).map(e=>e.a),...Object.values((S.sheetStyle||{}).env||{})]);
   return JSON.stringify({format:'sketch-to-building',version:1,saved:new Date().toISOString(),state:JSON.parse(JSON.stringify(S)),geo,assets:ASSETS.filter(a=>used.has(a.id))});}
@@ -10172,7 +10173,7 @@ async function projOpenId(id){if(PJ&&id===PJ.id){pjDlg.close();return;}const rec
   msg(`Opened “${hx(pjName())}”.${rec.file?` Its file is ${hx(rec.file)}.`:''}`);}
 // a project file from the computer opens as its own project; opening the same file again opens that project, not a copy
 async function projOpenFile(f){let j;try{j=JSON.parse(await f.text());}catch(e){pjMsg(`${hx(f.name)} isn't a project file.`);return;}
-  if(!j||j.format!=='sketch-to-building'||!j.state){pjMsg(`${hx(f.name)} isn't a Sketch to Building project. To bring in a model (.3dm, .ifc, .dxf…), use New project from a model file, or Import.`);return;}
+  if(!j||j.format!=='sketch-to-building'||!j.state){pjMsg(`${hx(f.name)} isn't an Itteriva project. To bring in a model (.3dm, .ifc, .dxf…), use New project from a model file, or Import.`);return;}
   const same=(await pjAll()).find(r=>r.file===f.name&&r.saved===j.saved);
   pjSwitch(same?Object.assign(same,{state:undefined}):{id:pjId(),created:Date.now(),file:f.name,fileAt:Date.parse(j.saved)||Date.now(),fileSig:'',saved:j.saved});
   loadProject(j,true);const st=JSON.parse(JSON.stringify(S));pjApply(st);PJ.fileSig=PJ.sig=pjSig();pjWrite(true);projMark();pjDlg.close();
@@ -10183,7 +10184,7 @@ async function projSave(as,incr,direct){if(!PJ)await projBoot();
   const name=pjName(),fn=pjFile(name),data=projectJSON();const sv=JSON.parse(data).saved;
   if(PJH&&!as){try{const w=await PJH.createWritable();await w.write(data);await w.close();return pjSaved(PJH.name,sv);}catch(e){PJH=null;}}
   const inClaude=!!(await dlNS());
-  if(!inClaude&&window.showSaveFilePicker){try{const h=await window.showSaveFilePicker({suggestedName:fn,types:[{description:'Sketch to Building project',accept:{'application/json':['.json']}}]});
+  if(!inClaude&&window.showSaveFilePicker){try{const h=await window.showSaveFilePicker({suggestedName:fn,types:[{description:'Itteriva project',accept:{'application/json':['.json']}}]});
       const w=await h.createWritable();await w.write(data);await w.close();PJH=h;return pjSaved(h.name,sv);}
     catch(e){if(e&&e.name==='AbortError'){msg('Save cancelled. Your work is still kept in this browser.');return;}}}
   const r=await saveFiles([[fn,data]],fn);
@@ -10207,7 +10208,7 @@ $('#pjName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault
 $('#pjSave').addEventListener('click',()=>{if(pjName()==='Untitled project'){pjMsg('Give the project a name first.');$('#pjName').focus();return;}projSave(pjDlg.dataset.mode==='as',false,true);});
 $('#pjSaveAs').addEventListener('click',()=>{if(pjName()==='Untitled project'){pjMsg('Give the project a name first.');$('#pjName').focus();return;}projSave(true,false,true);});
 $('#pjNew').addEventListener('click',()=>{pjDlg.close();exec('new');});
-$('#pjOpenF').addEventListener('click',async()=>{if(!(await dlNS())&&window.showOpenFilePicker){try{const[h]=await window.showOpenFilePicker({types:[{description:'Sketch to Building project',accept:{'application/json':['.json','.s2b']}}]});await projOpenFile(await h.getFile());PJH=h;return;}catch(e){if(e&&e.name==='AbortError')return;}}$('#pjFileIn').click();});
+$('#pjOpenF').addEventListener('click',async()=>{if(!(await dlNS())&&window.showOpenFilePicker){try{const[h]=await window.showOpenFilePicker({types:[{description:'Itteriva project',accept:{'application/json':['.json','.s2b']}}]});await projOpenFile(await h.getFile());PJH=h;return;}catch(e){if(e&&e.name==='AbortError')return;}}$('#pjFileIn').click();});
 $('#pjFileIn').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)projOpenFile(f);});
 $('#pjFromModel').addEventListener('click',()=>{pjDlg.close();exec('new');openImport('add','OPEN');});
 $('#pjInfo').addEventListener('click',()=>{pjDlg.close();openTB();});
@@ -10223,7 +10224,7 @@ function pubItems(){viewsInit();const nV=(S.views||[]).length,nB=(S.boards||[]).
   return[{k:'sheets',t:'Sheets',d:`${plural(nV,'sheet')} in one vector PDF with layers, each at its own paper size`,on:nV>0,na:!nV},
     {k:'boards',t:'Boards',d:nB?`${plural(nB,'board')} as one PDF`:'No boards yet',on:nB>0,na:!nB},
     {k:'views',t:'Saved views as pictures',d:nC?`${plural(nC,CW.it)} rendered as PNG`:`No ${CW.it}s yet`,on:nC>0,na:!nC},
-    {k:'project',t:'Project file',d:'Opens in Sketch to Building on any computer, with everything',on:true},
+    {k:'project',t:'Project file',d:'Opens in Itteriva on any computer, with everything',on:true},
     {k:'3dm',t:'Rhino model (.3dm)',d:'Layers, colors, meshes and curves',on:mine==='3dm'},{k:'ifc',t:'IFC model (.ifc)',d:'For Revit and ArchiCAD',on:mine==='ifc'},
     {k:'dxf',t:'AutoCAD DXF, 3D (.dxf)',d:'Every layer with its color',on:mine==='dxf'},{k:'dae',t:'Collada for SketchUp (.dae)',d:'Objects grouped by layer',on:mine==='dae'}];}
 let PUBSEL=null;
@@ -10254,7 +10255,7 @@ async function pubRun(){if(!PUBSEL||!PUBSEL.size){$('#pubMsg').textContent='Tick
       if(M.objs.length){for(const k of fm){const f=`${base}/Model/${mb}.${k}`;
           files.push([f,k==='3dm'?await write3DM(M):k==='ifc'?writeIFC(M,mb):k==='dxf'?writeDXF(M):writeDAE(M)]);}what.push(fm.map(k=>'.'+k).join(', '));}}
     const list=files.map(f=>'  '+f[0].slice(base.length+1)).join('\n');
-    files.push([`${base}/Read me.txt`,`${pjName()}\n${issue}\nIssued ${new Date().toLocaleString()}\n\nIn this set:\n${list}\n\nOpen the project file with Open in Sketch to Building to get back to exactly this issue.\n${chgReadMe()}`]);
+    files.push([`${base}/Read me.txt`,`${pjName()}\n${issue}\nIssued ${new Date().toLocaleString()}\n\nIn this set:\n${list}\n\nOpen the project file with Open in Itteriva to get back to exactly this issue.\n${chgReadMe()}`]);
     say('Packing the zip…');await loadLib('fflate.min.js');const enc=d=>typeof d==='string'?new TextEncoder().encode(d):d instanceof Uint8Array?d:new Uint8Array(d),z={};for(const[f,d]of files)z[f]=enc(d);
     const zip=window.fflate.zipSync(z,{level:6}),zn=base+'.zip',r=await saveFiles([[zn,zip]],zn);
     if(r.how!=='saved'&&r.how!=='downloaded'){say(`Not saved (${r.how}). Nothing was issued; try again.`);return;}
@@ -10573,7 +10574,7 @@ const uiTouch=()=>{try{if(typeof PJ!=='undefined'&&PJ)projTouch();}catch(e){}};
 // a new project asks for its own setup, starting from the one you have now
 let WLCPJ=false;
 {const _n=projNew;projNew=function(){const o=_n.apply(this,arguments);WLCPJ=true;setTimeout(()=>{openWelcome();},120);return o;};}
-{const _ow=openWelcome;openWelcome=function(){const k=$('#wlcDlg .wlck');if(k){const s=k.querySelectorAll('span');if(s.length>1){s[0].textContent=WLCPJ?'Set up this project':'Welcome to Sketch to Building';s[1].textContent=WLCPJ?'Each project keeps its own choices. Opening another project brings back the ones you made for it.':'Three quick choices. Each one can be changed later on its own, from the top bar or by typing WELCOME.';}}return _ow.apply(this,arguments);};}
+{const _ow=openWelcome;openWelcome=function(){const k=$('#wlcDlg .wlck');if(k){const s=k.querySelectorAll('span');if(s.length>1){s[0].textContent=WLCPJ?'Set up this project':'Welcome to Itteriva';s[1].textContent=WLCPJ?'Each project keeps its own choices. Opening another project brings back the ones you made for it.':'Three quick choices. Each one can be changed later on its own, from the top bar or by typing WELCOME.';}}return _ow.apply(this,arguments);};}
 $('#wlcDlg').addEventListener('close',()=>{WLCPJ=false;uiTouch();});
 
 // ---------- v97: new to modeling: setup, tour, Tier 1 lessons in Top view, and a coach that watches and helps ----------
@@ -10612,7 +10613,7 @@ const nuDlg=document.createElement('dialog');nuDlg.id='nuDlg';nuDlg.setAttribute
 const NUSET={goal:'room',u:null,pace:'show'};
 function nuSetupRender(){const r=(on)=>`<span class="nurd${on?' on':''}"></span>`,ch=(k,v,n)=>`<button type="button" class="nuch${NUSET[k]===v?' on':''}" data-k="${k}" data-v="${v}" aria-pressed="${NUSET[k]===v}">${r(NUSET[k]===v)}${n}</button>`;
   const G={room:'Your first lessons draw a room. You will turn it into walls in Tier 2.',house:'Tier 1 draws its floor plan; Tiers 2 and 3 raise walls, then add windows, doors and a roof.',explore:'Lessons still go in order, and you can draw freely between them.'};
-  nuDlg.innerHTML=`<div class="nudlg"><div class="nuk"><span>Sketch to Building</span><span>Step 2 of 2</span></div>
+  nuDlg.innerHTML=`<div class="nudlg"><div class="nuk"><span>Itteriva</span><span>Step 2 of 2</span></div>
   <h2 id="nuDlgT">Welcome. We'll go one small step at a time.</h2>
   <div class="nu3"><div><span class="nupill">First, 2 minutes</span><b>A quick tour of the screen</b><span>Where you draw, how to move around, where the tools are, and how to undo.</span></div>
   <div><span class="nupill">Then Tier 1</span><b>Draw flat, from above</b><span>Lines and rooms in Top view, like drawing on paper. 3D comes in Tier 2, once flat drawing feels easy.</span></div>
@@ -10786,7 +10787,7 @@ const NUFAQ=[[/top view|from above|looking down/i,'Top view is the view from str
   [/3d|three|walls?\b/i,'3D views and walls come in Tier 2, once flat drawing is easy. Finish the Tier 1 check to open them.'],
   [/door|window/i,'Doors and windows come in Tier 3. Right now you can leave a gap in a wall line where a door will go, about 0.9 m (3 ft) wide.']];
 function nuCtx(){const U=nuU(),ls=nuLessons(),L=ls[NU.les],cs=(S.solids||[]).filter(s=>s.kind==='curve');
-  return `App: Sketch to Building, a beginner-friendly architecture modeling app. The user is NEW to modeling and is in Tier 1 (drawing flat in Top view). Tools they have now: ${GCORE.map(g=>NUTOOLS[g[0]]?NUTOOLS[g[0]][0]:g[0]).join(', ')}. Current tool: ${tool}${typeof sk!=='undefined'&&sk?' (drawing a '+(sk.shape==='rect'?'rectangle':'line shape')+', '+(sk.pts||[]).length+' points so far)':''}. Units: ${nuFt()?'feet and inches (type 20\' or 20\'6")':'metres (type 6 or 6,4 for a rectangle)'}. Current lesson: ${L?L.t:'Tier 1 check: draw a room '+U.rx}. Their drawing has ${cs.length} shape(s)${cs.length?': '+cs.slice(-4).map(c=>{const z=nuCurveSize(c);return (c.closed?'closed ':'open ')+c.name.toLowerCase()+' '+nuLen(z[0])+' × '+nuLen(z[1]);}).join('; '):''}. How to do things: Line = click points, click the first point or press Enter to finish; type a length and Enter for an exact segment. Rectangle = click a corner, then type width,depth and Enter. Undo = Ctrl+Z. Zoom = mouse wheel; slide the view = drag with the wheel pressed or the right button. 3D, walls (Tier 2), doors, windows, roofs (Tier 3) and drawings (Tier 4) are not unlocked yet.`;}
+  return `App: Itteriva, a beginner-friendly architecture modeling app. The user is NEW to modeling and is in Tier 1 (drawing flat in Top view). Tools they have now: ${GCORE.map(g=>NUTOOLS[g[0]]?NUTOOLS[g[0]][0]:g[0]).join(', ')}. Current tool: ${tool}${typeof sk!=='undefined'&&sk?' (drawing a '+(sk.shape==='rect'?'rectangle':'line shape')+', '+(sk.pts||[]).length+' points so far)':''}. Units: ${nuFt()?'feet and inches (type 20\' or 20\'6")':'metres (type 6 or 6,4 for a rectangle)'}. Current lesson: ${L?L.t:'Tier 1 check: draw a room '+U.rx}. Their drawing has ${cs.length} shape(s)${cs.length?': '+cs.slice(-4).map(c=>{const z=nuCurveSize(c);return (c.closed?'closed ':'open ')+c.name.toLowerCase()+' '+nuLen(z[0])+' × '+nuLen(z[1]);}).join('; '):''}. How to do things: Line = click points, click the first point or press Enter to finish; type a length and Enter for an exact segment. Rectangle = click a corner, then type width,depth and Enter. Undo = Ctrl+Z. Zoom = mouse wheel; slide the view = drag with the wheel pressed or the right button. 3D, walls (Tier 2), doors, windows, roofs (Tier 3) and drawings (Tier 4) are not unlocked yet.`;}
 async function nuAsk(q){const a=$('#nuAns');a.hidden=false;a.innerHTML=`<b>${esc(q)}</b><span class="nuthink">Thinking…</span>`;NUANS.html=a.innerHTML;
   const fall=()=>{const f=NUFAQ.find(([r])=>r.test(q));return f?f[1]:'I can answer that once the coach is connected. For now: the lesson steps above show the next click, Show me points at the right tool, and Undo (Ctrl+Z) always takes back the last step.';};
   let text='';try{if(NUSAMP===undefined)NUSAMP=(window.claude&&typeof window.claude.use==='function')?await window.claude.use('sample'):null;}catch(e){NUSAMP=null;}
@@ -12186,7 +12187,7 @@ new MutationObserver(()=>{const was=document.body.classList.contains('pson');if(
 try{stripApply();dockApply();}catch(e){console.error(e);}
 
 /* ---------- Ireny 2026-10-22: the top bar's right-hand group lives in a menu under the program name.
-   Clicking "Sketch to Building" opens it: workspace, Customize, Undo, Redo, Import, Export and the command map.
+   Clicking "Itteriva" opens it: workspace, Customize, Undo, Redo, Import, Export and the command map.
    New users (the guided first steps) keep Undo and Redo in the bar, where the first lessons point to them. ---------- */
 {const top=document.querySelector('header.top'),brand=top.querySelector('.brand');
   brand.setAttribute('role','button');brand.tabIndex=0;brand.setAttribute('aria-haspopup','menu');brand.setAttribute('aria-expanded','false');brand.title='Menu: workspace, Customize, undo, import, export';
