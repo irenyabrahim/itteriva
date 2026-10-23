@@ -13415,39 +13415,42 @@ function ktTool(t,d){const b=document.querySelector(`#rail [data-tool="${t}"]`);
 function ktSteps(k){const P=KTP[k]||'your program',lv=ptName('s'),mb=ktTool('build','Make building'),wc=ktTool('wallcrv','Walls from curves');
   const pick=o=>o[k]||o.other||'';
   return[
-  {t:`Welcome, ${P} user`,d:`You already know how to model, so this takes about two minutes. Each step shows what will feel familiar from ${P}, what works differently here, and why.`,
+  {t:`Welcome, ${P} user`,d:`You already know how to model, so this takes about three minutes. Each step shows what will feel familiar from ${P}, what works differently here, and why.`,toc:1,
     why:'The short version: you build one model, and the plans, sections, elevations and sheets come from it and stay up to date. No redrawing after every iteration.'},
-  {el:[()=>$('#layoutSel')&&$('#layoutSel').previousElementSibling,'#layoutSel','#learnSel'],t:`Your ${P} setup`,
+  {sec:'Your setup',el:[()=>$('#layoutSel')&&$('#layoutSel').previousElementSibling,'#layoutSel','#learnSel'],t:`Your ${P} setup`,
     f:pick({rhino:'Command line on top, four viewports and Rhino command names. The mouse works the way it does in Rhino.',revit:'Tools along the top, Properties on the side, two-letter shortcuts like WA, DR and WN. The mouse works the way it does in Revit.',sketchup:'One row of tools, single keys like L, R, P and M, and Entity Info on the side. The mouse works the way it does in SketchUp.',autocad:'Tools along the top, the command line at the bottom and aliases like L, PL, TR and O. The mouse works the way it does in AutoCAD.'}),
     n:`Layout, Controls and Learn are three separate choices. Keep the ${P} screen and switch to another program's shortcuts, or the other way round. Another user who works in a different program opens the same file in their own setup.`},
-  {el:'#cmdForm',t:'Type what you already know',
+  {sec:'Your setup',el:'#cmdForm',t:'Type what you already know',
     f:pick({rhino:'Polyline, ExtrudeCrv, BooleanUnion, Trim and Offset run as you expect, and the command line asks for the next input.',revit:'WA, DR, WN, LI and TR run as you expect.',sketchup:'L, R, P, M and F run as you expect, and you can type a length right after a click.',autocad:'PL, L, TR, EX, O and F run as you expect, and the command line asks for the next input.'}),
     n:`Commands from all four programs work here. Type ${ktOther(k)} and it runs too. The command line says which tool it ran and where that command comes from.`},
-  {el:['#rail [data-tool="build"]','#gRail [data-tool="build"]','#rail'],t:'Sketch freely, then make it a building',
-    f:pick({rhino:'Curves, extrusions and Booleans work like in Rhino.',revit:'Walls, floors, roofs, doors and windows are real building elements, like in Revit.',sketchup:'Draw a shape and push or pull it, like in SketchUp.',autocad:'Lines and polylines with snaps, trim and offset work like in AutoCAD.'}),
-    n:`${mb} turns a sketch, a closed outline or a massing solid into walls, floors and a roof. ${wc} does the same for lines you traced over a plan. `+pick({rhino:'No plug-in, and no rebuilding the model in another program to get drawings.',revit:"You don't have to start with walls: mass it freely first, then convert.",sketchup:'Your massing stops being only faces: it knows which part is a wall, a floor and a roof.',autocad:'Your 2D outline becomes a 3D building, so sections and elevations come for free.'})},
-  {el:[()=>{const a=$('#asmTabs');return a&&(a.closest('.card,.panel,section')||a);}],t:'Walls, floors and roofs have layers',
-    f:pick({revit:"Like editing a wall, floor or roof type's structure in Revit: layers, thicknesses and materials.",other:`In ${P} a wall is usually just geometry with a thickness.`}),
-    n:'Every wall, floor and roof carries its assembly: cladding, insulation, structure and finish, with the total thickness and R and U values. Sections and details draw each layer, and changing the assembly updates every wall at once.'},
-  {el:['.vplabel'],t:'Views and display modes',
+  {sec:'Modeling',el:['.vplabel'],t:'Views and display modes',
     f:pick({rhino:'Like the viewport title menu in Rhino.',revit:'Like switching views and visual styles in Revit.',sketchup:'Like the camera views and face styles in SketchUp.',autocad:'Like the view and visual style controls in the corner of the drawing area in AutoCAD.'}),
     n:'Click ▾ on a view title for other views and display modes such as Wireframe, Shaded, Rendered and Ghosted. Plan and side views stay flat: you can pan and zoom, but they never tilt by accident.'},
-  {el:['#howBtn'],t:'Stuck? Ask how to model it',
-    f:`Like searching ${P} help or a tutorial, except you never leave your model.`,
-    n:'The ? button answers "How do I model this?". Type what you want, such as a spiral staircase or a curved roof, and it lists the commands that do it here, with tutorials for the programs you pick. HOWTO opens it from the command line.'},
-  {el:['.pstrip:not(.dwstrip) [data-g="s"]','.tier[data-g="s"]'],t:'Floor levels drive the plans',
+  {sec:'Modeling',el:['#rail [data-tool="build"]','#gRail [data-tool="build"]','#rail'],t:'Sketch freely, then make it a building',
+    f:pick({rhino:'Curves, extrusions and Booleans work like in Rhino.',revit:'Walls, floors, roofs, doors and windows are real building elements, like in Revit.',sketchup:'Draw a shape and push or pull it, like in SketchUp.',autocad:'Lines and polylines with snaps, trim and offset work like in AutoCAD.'}),
+    n:`${mb} turns a sketch, a closed outline or a massing solid into walls, floors and a roof. ${wc} does the same for lines you traced over a plan. `+pick({rhino:'No plug-in, and no rebuilding the model in another program to get drawings.',revit:"You don't have to start with walls: mass it freely first, then convert.",sketchup:'Your massing stops being only faces: it knows which part is a wall, a floor and a roof.',autocad:'Your 2D outline becomes a 3D building, so sections and elevations come for free.'})},
+  {sec:'Modeling',el:[()=>{const a=$('#asmTabs');return a&&(a.closest('.card,.panel,section')||a);}],t:'Walls, floors and roofs have layers',
+    f:pick({revit:"Like editing a wall, floor or roof type's structure in Revit: layers, thicknesses and materials.",other:`In ${P} a wall is usually just geometry with a thickness.`}),
+    n:'Every wall, floor and roof carries its assembly: cladding, insulation, structure and finish, with the total thickness and R and U values. Sections and details draw each layer, and changing the assembly updates every wall at once.'},
+  {sec:'Building data',tier:'s',el:[()=>{const l=$('#lvList');return l&&l.closest('.card');}],t:'Floor levels drive the plans',
     f:pick({revit:'Levels work like Revit levels: a name, an elevation and a plan for each.',rhino:'Instead of a layer or a construction plane for each floor, the floors are part of the model.',sketchup:'Instead of a tag or a group for each floor, the floors are part of the model.',autocad:'Instead of a separate drawing for each floor, the floors are part of one model.'}),
-    n:`Levels live in the ${lv} panel (this icon). Each level gets its own plan, cut at a set height above the floor. Add a level and its plan appears; rename it and the plan follows. For an imported model, type FLOORLEVELS: it finds the floors and you drag the markers to correct them.`},
-  {ws:'draw',pos:'side',el:['#dwList','#layoutHost'],t:'Your sheets are laid out here',
+    n:`Levels live in the ${lv} panel, opened from its icon on the right. Each level gets its own plan, cut at a set height above the floor. Add a level and its plan appears; rename it and the plan follows. For an imported model, type FLOORLEVELS: it finds the floors and you drag the markers to correct them.`},
+  {sec:'Building data',tier:'s',el:[()=>{const t=$('#pgTitle');return t&&t.closest('.card');}],t:'Program check keeps the brief in view',
+    f:pick({revit:'Like rooms, area schedules and area plans in Revit, except they are checked against the brief while you design.',rhino:'In Rhino you would check areas and setbacks by hand or with a script.',sketchup:'In SketchUp you would measure areas and setbacks by hand or with an extension.',autocad:'In AutoCAD you would check areas with AREA and a spreadsheet.'}),
+    n:'Enter the site, the zoning limits (FAR, lot coverage, setback, height) and the rooms the brief asks for, with their areas and which rooms must be next to each other. It is all checked live while you design, and anything that breaks the brief turns red. Edit opens it; the command is PROGRAM.'},
+  {sec:'Drawings',ws:'draw',pos:'side',el:['#dwList','#layoutHost'],t:'Your sheets are laid out here',
     f:pick({revit:'Like sheets and views in Revit: plans, sections and elevations are generated, not drawn.',rhino:'Like Layouts with details, except the drawings are already made: no new Make2D after every change.',sketchup:'Like sending scenes to a layout document, except plans and sections are real drawings with line weights and hatches.',autocad:'Like layouts and viewports in AutoCAD, except the plans, sections and elevations come from the 3D model.'}),
     n:'The Drawings tab lists every sheet on the left and lays out the one you pick in the middle, with its title block, scale and paper size. The plans, sections and elevations on it are live: change the model and every sheet updates, so after each iteration you edit once and the whole set follows. Diagram sheets add a top view or a line drawing of the massing for boards.'},
-  {ws:'draw',el:['#sxM2d'],t:'Make2D when you want plain lines',
+  {sec:'Drawings',ws:'draw',el:['#sxM2d'],t:'Make2D when you want plain lines',
     f:pick({rhino:'Like Make2D in Rhino: the 3D model becomes flat 2D linework.',revit:'Like exporting a view to CAD lines, without leaving the program.',sketchup:'Like exploding a layout viewport into lines.',autocad:'Like flattening a 3D view into 2D linework.'}),
     n:'Make2D turns the live drawing on this sheet into 2D lines you can join, trim, offset and restyle like any drafting. That sheet then stops following the model; press Make2D again to go back to the live drawing (Undo brings your 2D lines back).'},
-  {ws:'draw',el:['.dwm-ann'],t:'Draw on any sheet without breaking the model',
+  {sec:'Drawings',ws:'draw',el:['.dwm-ann'],t:'Draw on any sheet without breaking the model',
     f:pick({autocad:'Draft on sheets with lines, hatches, text and dimensions, the AutoCAD way.',rhino:'Draw over a drawing like you would after a Make2D, with the curve tools you know.',sketchup:'Draw and annotate like on a layout page.',revit:'Like detail lines, filled regions and Linework in Revit, with more freedom.'}),
     n:'Draw mode lets you redraw, restyle, hide or add lines on a plan, section or elevation. Your edits sit on top of the drawing and never change the model, and they stay attached to their walls and openings when the model moves. Model-driven sheets keep model lines for a drawing set; Presentation sheets let you change anything for boards.'},
-  {el:['#learnSel'],t:'Learn another program while you work',
+  {sec:'Help and learning',el:['#howBtn'],t:'Stuck? Ask how to model it',
+    f:`Like searching ${P} help or a tutorial, except you never leave your model.`,
+    n:'The ? button answers "How do I model this?". Type what you want, such as a spiral staircase or a curved roof, and it lists the commands that do it here, with tutorials for the programs you pick. HOWTO opens it from the command line.'},
+  {sec:'Help and learning',el:['#learnSel'],t:'Learn another program while you work',
     n:`Pick a program here and each command you use shows its name in that program, with a short card telling you what to type next time. When you're ready, practice mode switches to its controls. You keep working on your project the whole time.`},
   {t:'Why this program is different',list:['<b>One model, zero redo.</b> The sketch, the building and the drawing set stay linked from the first idea to the last sheet.','<b>Four programs in one.</b> Your layout and commands, and everyone else\'s, in the same file.','<b>Building smarts without the setup.</b> Levels, assemblies and a plan for each floor come from what you sketch or import.','<b>Free drawing where you want it.</b> Draw on presentation sheets, keep model lines on the drawing set.'],
     why:'Type TOUR any time to see this again.'}];}
@@ -13456,20 +13459,29 @@ const KT={i:0,k:'',steps:[]};
 {const st=document.createElement('style');st.textContent=`#ktTour{position:fixed;inset:0;z-index:310;pointer-events:none}#ktTour[hidden]{display:none}
 .ktcard{width:400px}.ktcard .ktb{display:flex;flex-direction:column;gap:3px;padding:9px 11px;border-radius:9px;background:var(--panel-2,rgba(127,127,127,.08));border:1px solid var(--line)}
 .ktcard .ktb small{font-size:10.5px;letter-spacing:.08em;font-weight:700;color:var(--muted,#667)}.ktcard .ktb.new{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--panel))}.ktcard .ktb.new small{color:var(--accent)}
-.ktcard .ktwhy{color:var(--muted,#667)}.ktcard ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}.ktcard .ktdots{display:flex;gap:4px}.ktcard .ktdots i{width:6px;height:6px;border-radius:3px;background:var(--line)}.ktcard .ktdots i.on{background:var(--accent);width:16px}
+.ktcard .ktwhy{color:var(--muted,#667)}.ktcard ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}.ktcard .ktdots{display:flex;gap:4px}.ktcard .ktdots i{width:6px;height:6px;border-radius:3px;background:var(--line)}.ktcard .ktdots i.on{background:var(--accent);width:16px}.ktcard .ktdots i.done{background:color-mix(in srgb,var(--accent) 45%,var(--line))}.ktcard .ktdots b{width:5px}
+.ktcard .ktsec{font-size:10.5px;letter-spacing:.08em;font-weight:700;color:var(--accent);margin-bottom:-6px}.ktcard .kttoc{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:3px}.ktcard .kttoc span{color:var(--muted,#667);font-size:12px}
 .ktspot.ktnone{left:50%!important;top:50%!important;width:0!important;height:0!important;box-shadow:0 0 0 9999px rgba(10,14,20,.5)}`;document.head.appendChild(st);}
 function ktStart(k){k=KTP[k]?k:(KTP[S.keymap]?S.keymap:'rhino');if(typeof nuTourEl!=='undefined'&&!nuTourEl.hidden)return;
   if(typeof tool!=='undefined'&&tool!=='select')try{exec('select');}catch(e){}
-  KT.k=k;KT.ws0=ktWs();KT.steps=ktSteps(k).filter(s=>!s.el||s.ws==='draw'||ktRect(s.el));KT.i=0;ktEl.hidden=false;document.body.classList.add('kttouring');ktDraw();}
-function ktEnd(){ktEl.hidden=true;if(KT.ws0&&ktWs()!==KT.ws0)ktSetWs(KT.ws0);document.body.classList.remove('kttouring');PRF.ktDone=Object.assign({},PRF.ktDone,{[KT.k]:1});prfSave();msg('Tour finished. Type TOUR to see it again.');}
+  KT.k=k;KT.ws0=ktWs();KT.tier=null;KT.steps=ktSteps(k).filter(s=>!s.el||s.ws==='draw'||s.tier||ktRect(s.el));KT.i=0;ktEl.hidden=false;document.body.classList.add('kttouring');ktDraw();}
+function ktEnd(){ktEl.hidden=true;ktTier(null);if(KT.ws0&&ktWs()!==KT.ws0)ktSetWs(KT.ws0);document.body.classList.remove('kttouring');PRF.ktDone=Object.assign({},PRF.ktDone,{[KT.k]:1});prfSave();msg('Tour finished. Type TOUR to see it again.');}
+function ktSecs(){const o=[];KT.steps.forEach(s=>{if(!s.sec)return;const l=o[o.length-1];if(l&&l[0]===s.sec)l[1]++;else o.push([s.sec,1]);});return o;}
+function ktSecPos(s){const a=KT.steps.filter(x=>x.sec===s.sec);return `${a.indexOf(s)+1} of ${a.length}`;}
 function ktWs(){const b=document.querySelector('#wsw [aria-pressed="true"]');return b?b.dataset.w:'model';}
 function ktSetWs(w){const b=document.querySelector(`#wsw [data-w="${w}"]`);if(b)b.click();}
+function ktTier(g){const on=typeof stripOn==='function'&&stripOn();
+  if(g){if(on&&KT.tier!==g&&!stripAct().includes(g)){if(!KT.tier)KT.pact0=stripAct();stripSet([g]);KT.tier=g;}return;}
+  if(KT.tier){KT.tier=null;if(on)stripSet(KT.pact0&&KT.pact0.length?KT.pact0:['p']);}}
 function ktDraw(){const n=KT.steps.length,s=KT.steps[KT.i];if(!s){ktEnd();return;}
-  const want=s.ws||(s.el?'model':null);if(want&&ktWs()!==want){ktSetWs(want);clearTimeout(KT.tm);KT.tm=setTimeout(()=>{if(!ktEl.hidden)ktDraw();},450);}const sp=ktEl.querySelector('.ktspot'),cd=ktEl.querySelector('.ktcard'),P=KTP[KT.k];
+  const want=s.ws||(s.el?'model':null);if(want&&ktWs()!==want){ktSetWs(want);clearTimeout(KT.tm);KT.tm=setTimeout(()=>{if(!ktEl.hidden)ktDraw();},450);}
+  if(ktWs()==='model'){const t0=KT.tier;ktTier(s.tier);if(t0!==KT.tier){clearTimeout(KT.tm2);KT.tm2=setTimeout(()=>{if(!ktEl.hidden)ktDraw();},350);}}
+  if(s.el){const e0=[].concat(s.el).map(q=>typeof q==='function'?q():document.querySelector(q)).find(Boolean);if(e0&&e0.scrollIntoView)try{e0.scrollIntoView({block:'nearest'});}catch(e){}}const sp=ktEl.querySelector('.ktspot'),cd=ktEl.querySelector('.ktcard'),P=KTP[KT.k];
   const r=s.el?ktRect(s.el):null,pad=6;sp.classList.toggle('ktnone',!r);
   if(r)sp.style.cssText=`left:${r.left-pad}px;top:${r.top-pad}px;width:${r.width+2*pad}px;height:${r.height+2*pad}px`;else sp.style.cssText='';
-  cd.innerHTML=`<div class="nurow2" style="align-items:center"><span class="ktdots">${KT.steps.map((x,j)=>`<i${j===KT.i?' class="on"':''}></i>`).join('')}</span><span style="flex:1"></span><span class="nupill">${KT.i+1} of ${n}</span><button type="button" class="nux" data-k="end" aria-label="End tour">${nuIc(NUI.close,13)}</button></div>
-    <b class="nubt" style="font-size:17px">${esc(s.t)}</b>${s.d?`<span>${esc(s.d)}</span>`:''}
+  cd.innerHTML=`<div class="nurow2" style="align-items:center"><span class="ktdots">${KT.steps.map((x,j)=>`${j&&x.sec!==KT.steps[j-1].sec?'<b></b>':''}<i${j===KT.i?' class="on"':j<KT.i?' class="done"':''}></i>`).join('')}</span><span style="flex:1"></span><span class="nupill">${KT.i+1} of ${n}</span><button type="button" class="nux" data-k="end" aria-label="End tour">${nuIc(NUI.close,13)}</button></div>
+    ${s.sec?`<small class="ktsec">${esc(s.sec.toUpperCase())} · ${ktSecPos(s)}</small>`:''}<b class="nubt" style="font-size:17px">${esc(s.t)}</b>${s.d?`<span>${esc(s.d)}</span>`:''}
+    ${s.toc?`<ol class="kttoc">${ktSecs().map(([nm,c])=>`<li><b>${esc(nm)}</b> <span>${c} step${c>1?'s':''}</span></li>`).join('')}</ol>`:''}
     ${s.f?`<div class="ktb"><small>LIKE IN ${esc(P.toUpperCase())}</small><span>${esc(s.f)}</span></div>`:''}
     ${s.n?`<div class="ktb new"><small>${s.f?'DIFFERENT HERE':'NEW HERE'}</small><span>${esc(s.n)}</span></div>`:''}
     ${s.list?`<ul>${s.list.map(x=>`<li>${x}</li>`).join('')}</ul>`:''}
