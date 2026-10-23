@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Itteriva</title><!-- v105b st22 walnut -->
+<title>Itteriva</title><!-- v105c textures -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&family=Architects+Daughter&display=swap">
 <style>
@@ -1914,7 +1914,9 @@ body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padd
 <dialog id="matDlg" aria-labelledby="matTitle"><div class="dlg">
   <button class="ghost close" id="matClose" type="button">Cancel</button>
   <h3 id="matTitle">Material</h3><p id="matNote"></p>
-  <div class="wfrm"><label><span id="matL">Material</span><select id="matSel"></select></label></div>
+  <div class="wfrm"><label><span id="matL">Material</span><select id="matSel"></select></label>
+    <label><span>Texture size</span><select id="matSc"><option value="0.5">50% of real size</option><option value="0.75">75%</option><option value="1">Real size</option><option value="1.5">150%</option><option value="2">200%</option></select></label>
+    <label><span>Texture direction</span><select id="matRot"><option value="0">As built (boards and courses level)</option><option value="1">Turned 90°</option></select></label></div>
   <p class="note" id="matInfo"></p>
   <div class="dlgbar"><button type="button" class="primary" id="matGo">Assign</button></div>
 </div></dialog>
@@ -2539,12 +2541,110 @@ function meshPlanCut(s,y){const key=s.geo+'|'+s.pos.join()+'|'+s.rot+'|'+s.sc.jo
 const matCache={};
 const RIBGL={corr:'float p=0.0762,a=6.2832*s/p;d=0.55*cos(a);sh=0.9+0.1*sin(a);',seam:'float p=0.4064,f=fract(s/p)*p;float e1=smoothstep(0.,0.004,f)*(1.-smoothstep(0.008,0.012,f)),e2=smoothstep(0.016,0.02,f)*(1.-smoothstep(0.024,0.028,f));d=0.85*e1-0.85*e2;sh=f<0.028?0.86:1.;',trap:'float p=0.2,f=fract(s/p)*p;float e1=smoothstep(0.,0.006,f)*(1.-smoothstep(0.012,0.018,f)),e2=smoothstep(0.04,0.046,f)*(1.-smoothstep(0.052,0.058,f));d=0.7*e1-0.7*e2;sh=f<0.058?0.9:1.;',flat:'float fy=fract(y/0.406)*0.406,fx=fract(s/3.0)*3.0;sh=(fy<0.01||fx<0.008)?0.55:1.;d=fy<0.01?0.:0.;',imp:'float p=0.15,a=6.2832*s/p;d=0.22*cos(a);float fx=fract(s/1.0)*1.0;sh=fx<0.01?0.55:0.96+0.04*sin(a);',acm:'float fy=fract(y/0.9)*0.9,fx=fract(s/1.2)*1.2;sh=(fy<0.012||fx<0.012)?0.45:1.;'};
 // ribs bend the shading normal and darken joints; s runs across the face horizontally, y is height
-function ribify(m,kind){const fn=RIBGL[kind];if(!fn)return m;m.onBeforeCompile=sh=>{sh.vertexShader='varying vec3 vRibP;\n'+sh.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\nvRibP=(modelMatrix*vec4(transformed,1.0)).xyz;');
+function ribify(m,kind){const fn=RIBGL[kind];if(!fn)return m;const prev=m.onBeforeCompile;m.onBeforeCompile=sh=>{prev.call(m,sh);sh.vertexShader='varying vec3 vRibP;\n'+sh.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\nvRibP=(modelMatrix*vec4(transformed,1.0)).xyz;');
   sh.fragmentShader='varying vec3 vRibP;\n'+sh.fragmentShader.replace('#include <normal_fragment_maps>','#include <normal_fragment_maps>\n{vec3 wn=normalize(inverseTransformDirection(normal,viewMatrix));vec3 t=cross(vec3(0.,1.,0.),wn);float tl=length(t);if(tl>0.2){t/=tl;float s=dot(vRibP,t),y=vRibP.y,d=0.,sh=1.;'+fn+(renderer.capabilities.isWebGL2?'float aa=clamp(1.5-fwidth(s)/0.02,0.,1.);d*=aa;sh=mix(1.,sh,aa);':'')+'vec3 tv=normalize((viewMatrix*vec4(t,0.)).xyz);normal=normalize(normal+tv*d);diffuseColor.rgb*=sh;}}');};
-  m.customProgramCacheKey=()=>'rib-'+kind;return m;}
-function matFor(key){const k=key;if(!matCache[k]){const c=MATS[key]?MATS[key].col:key;
-  const mt=MATS[key]&&MATS[key].metal;matCache[k]=new THREE.MeshStandardMaterial({color:c,roughness:mt?0.5:0.88,metalness:mt?0.12:0});if(MATS[key]&&MATS[key].rib)ribify(matCache[k],MATS[key].rib);}return matCache[k];}
-function matFor2(key){const k=key+'|d';if(!matCache[k]){matCache[k]=matFor(key).clone();matCache[k].side=THREE.DoubleSide;matCache[k].shadowSide=THREE.FrontSide;if(MATS[key]&&MATS[key].rib)ribify(matCache[k],MATS[key].rib);}return matCache[k];}
+  m.customProgramCacheKey=()=>'rib-'+kind+(m.userData.tp?'|tp':'');return m;}
+/* Rendered materials (v105c): every material gets a texture drawn here at its real size (bricks 215 x 65 mm, boards 150 mm...),
+   a bump map, its own roughness and, for metals, reflections from a soft sky. Textures are placed by real-world size on each face
+   (horizontal along the face, vertical up it; flat faces from above), so a brick is a brick whatever the object's size. Curved
+   faces fall back to a box projection. s.tmap {sc,rot} scales or turns one object's texture (Material dialog). */
+const TXR=1024,txCache={};
+function txRng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+function txHash(i,j,s){let h=(Math.imul(i|0,374761393)+Math.imul(j|0,668265263)+Math.imul(s|0,2147483647))>>>0;h=Math.imul(h^(h>>>13),1274126177)>>>0;return((h^(h>>>16))>>>0)/4294967296;}
+// tileable value noise: nx by ny cells across the tile, smooth, 0..1
+function txNoise(nx,ny,seed){nx=Math.max(1,Math.round(nx));ny=Math.max(1,Math.round(ny));const g=new Float32Array(nx*ny);for(let j=0;j<ny;j++)for(let i=0;i<nx;i++)g[j*nx+i]=txHash(i,j,seed);
+  return(u,v)=>{const x=u*nx,y=v*ny,i=Math.floor(x),j=Math.floor(y),fx=x-i,fy=y-j,sx=fx*fx*(3-2*fx),sy=fy*fy*(3-2*fy),i0=((i%nx)+nx)%nx,j0=((j%ny)+ny)%ny,i1=(i0+1)%nx,j1=(j0+1)%ny;
+    const a=g[j0*nx+i0],b=g[j0*nx+i1],c=g[j1*nx+i0],d=g[j1*nx+i1];return a+(b-a)*sx+(c-a)*sy+(a-b-c+d)*sx*sy;};}
+function txFbm(nx,ny,seed,oct=4){const L=[];for(let o=0;o<oct;o++)L.push(txNoise(nx*2**o,ny*2**o,seed+o*101));return(u,v)=>{let s=0,w=0,a=1;for(const f of L){s+=f(u,v)*a;w+=a;a*=0.5;}return s/w;};}
+function txRgb(h){const c=new THREE.Color(h);return[c.r*255,c.g*255,c.b*255];}
+const txCl=v=>v<0?0:v>255?255:v;
+// cellular pebbles/clumps: nearest of jittered points in a tileable grid -> [dist/r, id]
+function txCells(n,seed){return(u,v)=>{const x=u*n,y=v*n,i=Math.floor(x),j=Math.floor(y);let b=9,b2=9,id=0;
+  for(let dj=-1;dj<=1;dj++)for(let di=-1;di<=1;di++){const ci=i+di,cj=j+dj,wi=((ci%n)+n)%n,wj=((cj%n)+n)%n,px=ci+0.15+0.7*txHash(wi,wj,seed),py=cj+0.15+0.7*txHash(wi,wj,seed+7),d=Math.hypot(px-x,py-y);
+    if(d<b){b2=b;b=d;id=wj*n+wi;}else if(d<b2)b2=d;}return[b,b2,id];};}
+/* each entry: ts tile size in m [w,h], rough, metal, bs bump strength, f(x,y) in m -> [r,g,b,height 0..1]; d = what the texture shows */
+const TXD={
+  brick:{ts:[0.9,0.6],rough:0.86,bs:1.0,d:'215 × 65 mm bricks, 10 mm mortar, running bond',mk(C){const W=0.225,H=0.075,m=0.01,sp=txFbm(90,60,3,3),mo=txRgb('#b8b0a3');
+    return(x,y)=>{const r=Math.floor(y/H),off=r%2?W/2:0,bi=Math.floor((x+off)/W),bx=(x+off)-bi*W,by=y-r*H,id=txHash(bi%4,r,11),n=sp(x/0.9,y/0.6);
+      if(bx<m||by<m){const k=0.9+0.2*n;return[mo[0]*k,mo[1]*k,mo[2]*k,0.15];}
+      const k=0.82+0.32*id+0.18*(n-0.5),e=Math.min(bx-m,W-bx,by-m,H-by),hb=Math.min(1,0.55+e/0.004*0.45);return[C[0]*k*(1+0.06*(txHash(bi,r,5)-0.5)),C[1]*k,C[2]*k*(0.95+0.1*id),hb*(0.9+0.1*n)];};}},
+  cmu:{ts:[1.2,0.8],rough:0.92,bs:0.9,d:'390 × 190 mm blocks, 10 mm joints',mk(C){const W=0.4,H=0.2,m=0.01,sp=txFbm(240,160,4,2),mo=txRgb('#a29d93');
+    return(x,y)=>{const r=Math.floor(y/H),off=r%2?W/2:0,bi=Math.floor((x+off)/W),bx=(x+off)-bi*W,by=y-r*H,n=sp(x/1.2,y/0.8),pore=n>0.78?0.75:1;
+      if(bx<m||by<m)return[mo[0],mo[1],mo[2],0.1];const k=(0.92+0.12*txHash(bi%3,r,2)+0.16*(n-0.5))*pore;return[C[0]*k,C[1]*k,C[2]*k,0.8+0.2*n*pore];};}},
+  concrete:{ts:[2.4,1.2],rough:0.8,bs:0.6,d:'board-formed panels 1200 × 2400 mm with tie holes',mk(C){const lo=txFbm(6,3,8,4),hi=txFbm(480,240,9,2);
+    return(x,y)=>{const n=lo(x/2.4,y/1.2),p=hi(x/2.4,y/1.2),seam=(x%1.2)<0.003||y<0.003,tx=(x%0.6)-0.3,ty=(y%0.6)-0.3,hole=Math.hypot(tx,ty)<0.011;
+      let k=0.86+0.26*(n-0.5)+0.08*(p-0.5);if(p>0.83)k*=0.82;if(seam)k*=0.82;if(hole)k*=0.55;return[C[0]*k,C[1]*k,C[2]*k,hole?0:seam?0.3:0.7+0.3*p];};}},
+  render:{ts:[1,1],rough:0.95,bs:0.9,d:'fine sand-float stucco',mk(C){const lo=txFbm(5,5,12,3),hi=txFbm(260,260,13,2);
+    return(x,y)=>{const p=hi(x,y),k=0.95+0.07*(lo(x,y)-0.5)+0.1*(p-0.5);return[C[0]*k,C[1]*k,C[2]*k,p];};}},
+  clad:{ts:[1.8,1.2],rough:0.78,bs:0.8,d:'150 mm horizontal timber boards, 8 mm shadow gap',mk(C){const B=0.15,g=0.008,gr=txFbm(6,300,21,3),fig=txFbm(3,40,22,3);
+    return(x,y)=>{const r=Math.floor(y/B),by=y-r*B,j=0.3+1.2*txHash(r,0,4),dj=Math.abs(x-j);if(by<g)return[C[0]*0.3,C[1]*0.3,C[2]*0.3,0];
+      const k=(0.84+0.3*txHash(r,Math.floor((x-j+1.8)/1.8)%2,6))*(0.82+0.3*gr(x/1.8,y/1.2)+0.1*(fig(x/1.8,y/1.2)-0.5))*(dj<0.002?0.6:1);return[C[0]*k,C[1]*k*0.98,C[2]*k*0.95,dj<0.002?0.4:0.75+0.25*gr(x/1.8,y/1.2)];};}},
+  sheath:{ts:[2.44,2.44],rough:0.8,bs:0.4,d:'1220 × 2440 mm plywood sheets',mk(C){const gr=txFbm(4,200,31,3),fig=txFbm(12,4,32,4);
+    return(x,y)=>{const seam=(x%1.22)<0.003||y<0.003,f=fig(x/2.44,y/2.44),gw=gr(x/2.44+0.3*f,y/2.44),k=(0.85+0.25*gw+0.15*(f-0.5)+0.06*txHash(Math.floor(x/1.22),0,3))*(seam?0.6:1);return[C[0]*k,C[1]*k,C[2]*k*0.95,seam?0.2:0.6+0.4*gw];};}},
+  rigid:{ts:[2.4,2.4],rough:0.9,bs:0.3,d:'1200 × 2400 mm insulation boards',mk(C){const sp=txFbm(300,300,41,2);
+    return(x,y)=>{const seam=(x%1.2)<0.004||y<0.004,n=sp(x/2.4,y/2.4),k=(0.95+0.1*(n-0.5))*(seam?0.75:1);return[C[0]*k,C[1]*k,C[2]*k,seam?0.1:0.6+0.4*n];};}},
+  batt:{ts:[1.2,1.2],rough:1,bs:1.2,d:'mineral wool fibres',mk(C){const a=txFbm(240,24,51,3),b=txFbm(30,260,52,3),c=txFbm(80,80,53,3);
+    return(x,y)=>{const u=x/1.2,v=y/1.2,f=0.5*a(u,v)+0.3*b(u,v)+0.2*c(u,v),k=0.72+0.55*(f-0.3);return[C[0]*k,C[1]*k,C[2]*k*0.92,f];};}},
+  clt:{ts:[2.4,2.4],rough:0.72,bs:0.5,d:'cross-laminated timber, 150 mm lamellas, 2400 mm panels',mk(C){const L=0.15,gr=txFbm(80,4,61,3),fig=txFbm(30,3,62,3);
+    return(x,y)=>{const li=Math.floor(x/L),lx=x-li*L,fj=0.4+1.6*txHash(li,1,5),seam=lx<0.0015,joint=Math.abs(y-fj)<0.0015,pan=x<0.004;
+      const k=(0.86+0.2*txHash(li,0,9))*(0.85+0.25*gr(x/2.4,y/2.4)+0.1*(fig(x/2.4,y/2.4)-0.5))*(seam||joint?0.82:1)*(pan?0.45:1);return[C[0]*k,C[1]*k,C[2]*k*0.96,pan?0:seam?0.5:0.75+0.25*gr(x/2.4,y/2.4)];};}},
+  gyp:{ts:[1.2,1.2],rough:0.9,bs:0.25,d:'painted plasterboard',mk(C){const lo=txFbm(4,4,71,3),hi=txFbm(300,300,72,2);
+    return(x,y)=>{const n=hi(x/1.2,y/1.2),k=0.985+0.03*(lo(x/1.2,y/1.2)-0.5)+0.02*(n-0.5);return[C[0]*k,C[1]*k,C[2]*k,n];};}},
+  woodfloor:{ts:[2.4,1.4],rough:0.5,bs:0.5,d:'140 mm floor boards, random lengths',mk(C){const B=0.14,gr=txFbm(8,250,81,3),fig=txFbm(4,30,82,3);
+    return(x,y)=>{const r=Math.floor(y/B),by=y-r*B,o=2.4*txHash(r,0,3),xx=(x+o)%2.4,len=xx<1.1+0.4*txHash(r,1,4)?0:1,ed=Math.min(by,B-by),j=len?Math.abs(xx-(1.1+0.4*txHash(r,1,4))):xx;
+      const k=(0.8+0.32*txHash(r,len,7))*(0.84+0.26*gr(x/2.4,y/1.4)+0.12*(fig(x/2.4,y/1.4)-0.5))*(ed<0.0012||j<0.0015?0.55:1);return[C[0]*k,C[1]*k,C[2]*k*0.95,ed<0.0012||j<0.0015?0.1:0.8];};}},
+  tile:{ts:[1.2,1.2],rough:0.28,bs:0.7,d:'300 × 300 mm tiles, 3 mm grout',mk(C){const T=0.3,gw=0.003,lo=txFbm(40,40,91,3),gt=txRgb('#a49e92');
+    return(x,y)=>{const i=Math.floor(x/T),j=Math.floor(y/T),tx=x-i*T,ty=y-j*T;if(tx<gw||ty<gw)return[gt[0],gt[1],gt[2],0.1];
+      const k=0.95+0.07*txHash(i,j,4)+0.04*(lo(x/1.2,y/1.2)-0.5),e=Math.min(tx-gw,T-tx,ty-gw,T-ty);return[C[0]*k,C[1]*k,C[2]*k,Math.min(1,0.6+e/0.003*0.4)];};}},
+  screed:{ts:[3,3],rough:0.62,bs:0.2,d:'power-floated screed',mk(C){const lo=txFbm(5,5,101,4),tr=txFbm(30,30,102,3);
+    return(x,y)=>{const n=lo(x/3,y/3),t=tr(x/3,y/3),k=0.9+0.2*(n-0.5)+0.06*(t-0.5);return[C[0]*k,C[1]*k,C[2]*k,t];};}},
+  membrane:{ts:[3,3],rough:0.7,bs:0.3,d:'single-ply membrane, 3 m sheets with laps',mk(C){const gr=txFbm(400,400,111,2),lo=txFbm(4,4,112,3);
+    return(x,y)=>{const lap=y<0.08,edge=Math.abs(y-0.08)<0.004,k=(0.95+0.12*(lo(x/3,y/3)-0.5)+0.06*(gr(x/3,y/3)-0.5))*(lap?1.08:1)*(edge?0.6:1);return[C[0]*k,C[1]*k,C[2]*k,edge?0.2:lap?0.8:0.5+0.2*gr(x/3,y/3)];};}},
+  gravel:{ts:[0.5,0.5],rough:0.92,bs:2.2,d:'16–32 mm round gravel',mk(C){const ce=txCells(22,121),sp=txFbm(200,200,122,2);
+    return(x,y)=>{const[d,d2,id]=ce(x/0.5,y/0.5),edge=d2-d,k=(0.7+0.5*txHash(id,0,3))*(0.9+0.2*sp(x/0.5,y/0.5))*(edge<0.08?0.45+edge*6:1),t=txHash(id,1,4);
+      return[C[0]*k*(0.95+0.1*t),C[1]*k,C[2]*k*(1.05-0.1*t),edge<0.08?edge*6:0.5+0.5*Math.min(1,edge*2)];};}},
+  soil:{ts:[1,1],rough:0.95,bs:1.6,d:'sedum planting on growing medium',mk(C){const ce=txCells(30,131),lo=txFbm(6,6,132,3),G=[txRgb('#5f7a3a'),txRgb('#7d8a3e'),txRgb('#4b6a34'),txRgb('#8a6a48')];
+    return(x,y)=>{const[d,d2,id]=ce(x,y),edge=d2-d,g=G[Math.floor(txHash(id,2,5)*G.length)],l=lo(x,y),k=(0.8+0.4*txHash(id,0,3))*(0.85+0.3*l)*(edge<0.06?0.4:1);
+      return[(g[0]*0.6+C[0]*0.4)*k,(g[1]*0.6+C[1]*0.4)*k,(g[2]*0.6+C[2]*0.4)*k,edge<0.06?0:0.6+0.4*(1-d)];};}},
+  metal:{ts:[1,1],rough:0.34,metal:0.78,bs:0.15,d:'brushed steel, 200 mm trapezoidal ribs'},
+  mpanel:{ts:[1,1],rough:0.3,metal:0.75,bs:0.15,d:'flat panels 406 mm high, 3 m long'},
+  seam:{ts:[1,1],rough:0.3,metal:0.8,bs:0.15,d:'standing seams at 406 mm'},
+  corr:{ts:[1,1],rough:0.36,metal:0.75,bs:0.15,d:'76 mm corrugations'},
+  acm:{ts:[1,1],rough:0.2,metal:0.6,bs:0.05,d:'1200 × 900 mm composite panels'},
+  imp:{ts:[1,1],rough:0.38,metal:0.7,bs:0.15,d:'1000 mm insulated panels, 150 mm ribs'}};
+TXD.steelbatt=TXD.batt;TXD.joist=TXD.batt;
+const TXMETAL=C=>{const br=txFbm(500,3,141,3),lo=txFbm(4,4,142,3);return(x,y)=>{const b=br(x,y),k=0.94+0.1*(b-0.5)+0.06*(lo(x,y)-0.5);return[C[0]*k,C[1]*k,C[2]*k,b];};};
+function txMake(key){if(txCache[key])return txCache[key];const D=TXD[key],M=MATS[key];if(!D||!M)return null;const C=txRgb(M.col),f=D.mk?D.mk(C):TXMETAL(C);
+  const cv=document.createElement('canvas'),hv=document.createElement('canvas');cv.width=hv.width=cv.height=hv.height=TXR;const cx=cv.getContext('2d'),hx2=hv.getContext('2d'),A=cx.createImageData(TXR,TXR),H=hx2.createImageData(TXR,TXR);
+  const[tw,th]=D.ts;for(let j=0;j<TXR;j++){const y=(TXR-1-j+0.5)/TXR*th;for(let i=0;i<TXR;i++){const x=(i+0.5)/TXR*tw,p=f(x,y),o=(j*TXR+i)*4,h=txCl(p[3]*255);A.data[o]=txCl(p[0]);A.data[o+1]=txCl(p[1]);A.data[o+2]=txCl(p[2]);A.data[o+3]=255;H.data[o]=H.data[o+1]=H.data[o+2]=h;H.data[o+3]=255;}}
+  cx.putImageData(A,0,0);hx2.putImageData(H,0,0);const mk=c=>{const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=renderer.capabilities.getMaxAnisotropy();return t;};
+  return txCache[key]={map:mk(cv),bump:mk(hv),D};}
+// a soft sky for reflections: bright overcast top, light horizon, warm darker ground
+let ENVT=null;
+function envTex(){if(ENVT!==null)return ENVT;try{const sc=new THREE.Scene(),g=new THREE.SphereGeometry(10,32,16),c=[],p=g.attributes.position;
+  for(let i=0;i<p.count;i++){const y=p.getY(i)/10,col=y>0?new THREE.Color('#d9dee2').lerp(new THREE.Color('#ffffff'),Math.pow(y,0.6)):new THREE.Color('#8a8276').lerp(new THREE.Color('#4a453e'),Math.min(1,-y*2));c.push(col.r,col.g,col.b);}
+  g.setAttribute('color',new THREE.Float32BufferAttribute(c,3));sc.add(new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide})));
+  const lp=new THREE.Mesh(new THREE.PlaneGeometry(6,3),new THREE.MeshBasicMaterial({color:new THREE.Color(2.2,2.2,2.1),side:THREE.DoubleSide}));lp.position.set(3,7,4);lp.lookAt(0,0,0);sc.add(lp);
+  const pm=new THREE.PMREMGenerator(renderer);ENVT=pm.fromScene(sc,0.02).texture;pm.dispose();}catch(e){ENVT=false;}return ENVT;}
+const TPV='varying vec3 vTpP;varying vec3 vTpN;\n',TPF=`varying vec3 vTpP;varying vec3 vTpN;uniform vec2 tpTS;uniform float tpRot;uniform float tpBS;uniform sampler2D tpBump;
+vec2 tpUV(vec3 p,vec3 n){vec2 uv;if(abs(n.y)>0.97)uv=p.xz*vec2(1.,-1.);else{vec3 t=normalize(cross(vec3(0.,1.,0.),n)),b=cross(n,t);uv=vec2(dot(p,t),dot(p,b));}
+  if(tpRot>0.5)uv=vec2(uv.y,-uv.x);return uv/tpTS;}
+vec4 tpSample(sampler2D tx,vec3 p,vec3 n,float curved){if(curved<0.5)return texture2D(tx,tpUV(p,n));vec3 w=pow(abs(n),vec3(6.));w/=(w.x+w.y+w.z);
+  vec2 sx=(tpRot>0.5?p.yz:p.zy)/tpTS,sy=(tpRot>0.5?p.zx:p.xz)/tpTS,sz=(tpRot>0.5?p.yx:p.xy)/tpTS;return texture2D(tx,sx)*w.x+texture2D(tx,sy)*w.y+texture2D(tx,sz)*w.z;}
+`;
+function tpMat(m,key,tm){const T=txMake(key);if(!T)return m;const D=T.D,sc=tm&&tm.sc>0?tm.sc:1;
+  m.map=T.map;m.color.set('#ffffff');m.roughness=D.rough;m.metalness=D.metal||0;const E=envTex();if(E){m.envMap=E;m.envMapIntensity=D.metal?1.15:0.35;}
+  m.userData.tp={tpTS:{value:new THREE.Vector2(D.ts[0]*sc,D.ts[1]*sc)},tpRot:{value:tm&&tm.rot?1:0},tpBS:{value:D.bs*0.012},tpBump:{value:T.bump}};m.extensions={derivatives:true};
+  m.onBeforeCompile=sh=>{Object.assign(sh.uniforms,m.userData.tp);
+    sh.vertexShader=TPV+sh.vertexShader.replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvTpP=transformed*vec3(length(modelMatrix[0].xyz),length(modelMatrix[1].xyz),length(modelMatrix[2].xyz));vTpN=objectNormal;');
+    sh.fragmentShader=TPF+sh.fragmentShader.replace('#include <map_fragment>','vec3 tpN=normalize(vTpN);float tpC=length(fwidth(tpN))>0.015?1.:0.;vec4 tpCol=tpSample(map,vTpP,tpN,tpC);diffuseColor*=tpCol;')
+      .replace('#include <normal_fragment_maps>','#include <normal_fragment_maps>\n{float h=tpSample(tpBump,vTpP,tpN,tpC).r*tpBS;vec3 sX=dFdx(-vViewPosition),sY=dFdy(-vViewPosition),R1=cross(sY,normal),R2=cross(normal,sX);float fD=dot(sX,R1)*(gl_FrontFacing?1.:-1.);vec3 gr=sign(fD)*(dFdx(h)*R1+dFdy(h)*R2);normal=normalize(abs(fD)*normal-gr);}');};
+  m.customProgramCacheKey=()=>'tp';return m;}
+function mkMat(key,tm,dbl){const M=MATS[key],c=M?M.col:key,mt=M&&M.metal,m=new THREE.MeshStandardMaterial({color:c,roughness:mt?0.5:0.88,metalness:mt?0.12:0});
+  if(dbl){m.side=THREE.DoubleSide;m.shadowSide=THREE.FrontSide;}if(M){try{tpMat(m,key,tm);}catch(e){console.warn('texture',key,e);}if(M.rib)ribify(m,M.rib);}return m;}
+const tmKey=tm=>tm&&((tm.sc&&tm.sc!==1)||tm.rot)?`|${tm.sc||1}|${tm.rot?1:0}`:'';
+function matFor(key,tm){const k=key+tmKey(tm);return matCache[k]||(matCache[k]=mkMat(key,tm,false));}
+function matFor2(key,tm){const k=key+tmKey(tm)+'|d';return matCache[k]||(matCache[k]=mkMat(key,tm,true));}
 // several geometries as one (positions and normals), so a wall or a frame is one draw call
 function mergeGeos(gs){if(gs.length===1)return gs[0];const P=[],N=[];for(let g of gs){if(g.index)g=g.toNonIndexed();if(!g.attributes.normal)g.computeVertexNormals();P.push(g.attributes.position.array);N.push(g.attributes.normal.array);}
   const cat=A=>{const o=new Float32Array(A.reduce((a,x)=>a+x.length,0));let k=0;for(const x of A){o.set(x,k);k+=x.length;}return o;};
@@ -2949,7 +3049,7 @@ const curveMat=new THREE.LineBasicMaterial({color:'#1c2228'}),curveSelMat=new TH
 const fillMat=new THREE.MeshBasicMaterial({color:VPSEL,transparent:true,opacity:0.07,side:THREE.DoubleSide,depthWrite:false}),fillSelMat=new THREE.MeshBasicMaterial({color:VPSEL,transparent:true,opacity:0.22,side:THREE.DoubleSide,depthWrite:false});
 function buildSolids(){const sel=selIds();for(const s of S.solids){if(!s.layer)s.layer=S.curLayer||'L0';if(objHidden(s))continue;const on=sel.includes(s.id);
     if(s.kind==='mesh'){const T=geoThree(s.geo);if(!T)continue;const lc=objColor(s),lk=objLocked(s),G=GEO.get(s.geo);
-      if(T.mesh){const om=!lk&&s.mat&&MATS[s.mat]&&!s.img;let mt=lk?lockMat:om?matFor2(s.mat):colMat(surfCol(lc),!!G.c,true);if(s.img&&ulMat(s)){mt=ulMat(s);}else if(s.op&&!lk){const k=lc+'|op'+s.op;mt=lcMats[k]||(lcMats[k]=new THREE.MeshStandardMaterial({color:lc,roughness:0.1,metalness:0.1,transparent:true,opacity:s.op,depthWrite:false,side:THREE.DoubleSide}));}
+      if(T.mesh){const om=!lk&&s.mat&&MATS[s.mat]&&!s.img;let mt=lk?lockMat:om?matFor2(s.mat,s.tmap):colMat(surfCol(lc),!!G.c,true);if(s.img&&ulMat(s)){mt=ulMat(s);}else if(s.op&&!lk){const k=lc+'|op'+s.op;mt=lcMats[k]||(lcMats[k]=new THREE.MeshStandardMaterial({color:lc,roughness:0.1,metalness:0.1,transparent:true,opacity:s.op,depthWrite:false,side:THREE.DoubleSide}));}
         const m=new THREE.Mesh(T.mesh,mt);m.position.set(...s.pos);m.rotation.y=s.rot;m.scale.set(...s.sc);m.castShadow=m.receiveShadow=!s.op&&!s.img;if(s.img)m.renderOrder=s.txt?6:-2;m.userData={solid:s.id,cached:true,lc,edgeGeo:geoEdges(s.geo),ul:!!(s.img&&ulMat(s)),rmat:om?mt:!lk&&!s.img&&(s.fm||G.tex)?fileMat(s,G):!lk&&!s.img&&!s.op&&!G.c&&!s.col?rendMat(true):null};if(om)m.userData.lc=MATS[s.mat].col;world.add(m);
         if(on){const l=new THREE.LineSegments(geoEdges(s.geo),selLineMat);l.userData.cached=true;l.renderOrder=5;l.raycast=()=>{};m.add(l);}}
       if(T.lines){const l=new THREE.LineSegments(T.lines,on?curveSelMat:lk?edgeMat:lineMatFor(lc));l.position.set(...s.pos);l.rotation.y=s.rot;l.scale.set(...s.sc);l.userData={solid:s.id,cached:true};l.renderOrder=on?6:0;world.add(l);}
@@ -2961,7 +3061,7 @@ function buildSolids(){const sel=selIds();for(const s of S.solids){if(!s.layer)s
           if(on){const e=new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry,25),selLineMat);e.renderOrder=5;e.raycast=()=>{};m.add(e);}}}continue;}
       if(s.closed){const f=new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(s.pts.map(p=>new THREE.Vector2(p[0],p[1])))).rotateX(Math.PI/2),on?fillSelMat:fillMat);f.position.copy(l.position);f.rotation.y=s.rot;f.scale.copy(l.scale);f.userData={solid:s.id,keepMat:true};world.add(f);}continue;}
     const{g,th}=objGeo(s);if(s.kind==='brep')solidMat.side=THREE.DoubleSide;
-    const om=!objLocked(s)&&s.mat&&MATS[s.mat],m=new THREE.Mesh(g,objLocked(s)?lockMat:om?(s.kind==='brep'?matFor2(s.mat):matFor(s.mat)):solidMatFor(s));m.position.set(...s.pos);m.rotation.y=s.rot;m.scale.set(...s.sc);m.castShadow=m.receiveShadow=true;m.userData={solid:s.id,edgeTh:th,lc:objLayer(s)==='L0'&&!s.col?null:objColor(s),rmat:om?m.material:!objLocked(s)&&!s.col&&objLayer(s)!=='L0'?rendMat(s.kind==='brep'):null};if(om)m.userData.lc=MATS[s.mat].col;world.add(m);
+    const om=!objLocked(s)&&s.mat&&MATS[s.mat],m=new THREE.Mesh(g,objLocked(s)?lockMat:om?(s.kind==='brep'?matFor2(s.mat,s.tmap):matFor(s.mat,s.tmap)):solidMatFor(s));m.position.set(...s.pos);m.rotation.y=s.rot;m.scale.set(...s.sc);m.castShadow=m.receiveShadow=true;m.userData={solid:s.id,edgeTh:th,lc:objLayer(s)==='L0'&&!s.col?null:objColor(s),rmat:om?m.material:!objLocked(s)&&!s.col&&objLayer(s)!=='L0'?rendMat(s.kind==='brep'):null};if(om)m.userData.lc=MATS[s.mat].col;world.add(m);
     if(on){const l=new THREE.LineSegments(new THREE.EdgesGeometry(g,th),selLineMat);l.renderOrder=5;l.raycast=()=>{};m.add(l);}}}
 /* ---------- Walls from curves: a traced line, polyline or closed shape carries a wall type (layers, height, location line) and becomes a layered wall.
    Revit Wall › Pick Lines, VisualARQ vaWall from curves (Rhino), AutoCAD Architecture Convert to Walls, SketchUp: a wall made from edges.
@@ -8701,8 +8801,10 @@ function cmdMaterial(){const N=MATN[S.keymap],O=selObjs().filter(matOK),D=$('#ma
   const cur=O[0].mat||'';$('#matTitle').textContent=N.t;$('#matL').textContent=N.l;$('#matGo').textContent=N.go;
   $('#matNote').textContent=`${plural(O.length,'object')} selected. Rendered and Shaded views show the material; the sheets keep the layer's line work.`;
   const ff=O[0].fm;$('#matSel').innerHTML=`<option value="">${hx(ff&&ff.name?`From the file: ${ff.name}`:N.none)}</option>`+Object.entries(MATS).filter(([k,v])=>!v.vent).map(([k,v])=>`<option value="${k}"${k===cur?' selected':''}>${hx(v.name)}</option>`).join('');
+  const tm=O[0].tmap||{};$('#matSc').value=String(tm.sc||1);$('#matRot').value=tm.rot?'1':'0';
+  const inf=()=>{const k=$('#matSel').value,T=TXD[k];$('#matInfo').textContent=T?`Texture at real size: ${T.d}, placed by each face's own size so it stays true on any object. Scale or turn it here for this object only.`:'';$('#matSc').disabled=$('#matRot').disabled=!T;};$('#matSel').onchange=inf;inf();
   $('#matClose').onclick=()=>D.close();
-  $('#matGo').onclick=()=>{const k=$('#matSel').value;D.close();snap();for(const o of O){if(k)o.mat=k;else delete o.mat;}refresh();
+  $('#matGo').onclick=()=>{const k=$('#matSel').value,sc=+$('#matSc').value||1,rot=$('#matRot').value==='1'?1:0;D.close();snap();for(const o of O){if(k)o.mat=k;else delete o.mat;if(k&&(sc!==1||rot))o.tmap={sc,rot};else delete o.tmap;}refresh();
     msg(k?`${N.cmd}: ${MATS[k].name} on ${plural(O.length,'object')}. Switch the view to ${MODES.rendered[S.keymap]} to see it.`:`${N.cmd}: ${plural(O.length,'object')} back to ${N.none}.`);};
   try{D.showModal();}catch(e){D.setAttribute('open','');}$('#matSel').focus();}
 function ulOpacity(){const s=selIds().map(objById).find(o=>o&&o.img)||S.solids.find(o=>o.img);if(!s){msg('Select an image or PDF underlay first.');return;}
