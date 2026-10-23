@@ -1548,6 +1548,7 @@ body.dws #howBtn,body.dws #howPop{display:none!important}body.dwdraw .drrow{padd
 .frcard .frlv:hover{background:var(--hover,rgba(127,127,127,.08))}
 .frcard .frlv.on{background:color-mix(in srgb,var(--accent) 14%,transparent);box-shadow:inset 3px 0 0 var(--accent)}
 .frcard .frlv.on em{color:var(--accent);font-weight:600}
+.pmat{display:flex;flex-direction:column;gap:5px;margin-top:9px;padding-top:9px;border-top:1px solid var(--line)}.pmat .pmh{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.07em;font-size:10.5px;color:var(--muted)}.pmat label{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}.pmat select{width:62%;min-width:0;font-size:12px;padding:2px 4px}.pmat small{color:var(--muted);font-size:11px;line-height:1.35}
 </style>
 
 <header class="top">
@@ -13494,6 +13495,21 @@ $('#wlcGo').addEventListener('click',()=>{const k=WLC.know;if(!KTP[k]||(PRF.ktDo
   if((w==='tour'||w==='whatsnew'||w==="what's new")&&!(typeof NU!=='undefined'&&NU.on&&w==='tour')){cmdIn.value='';ktStart(PRF.knowNone?'':S.keymap);return;}
   return _rn.apply(this,arguments);};}
 
+/* Material in Properties: the selected objects' render material, texture size and direction, changed in place (same as the Material command) */
+function pMatObjs(){try{return selIds().map(objById).filter(o=>o&&matOK(o));}catch(e){return[];}}
+function pMatHTML(){const O=pMatObjs();if(!O.length||tool==='window'||tool==='door')return'';const N=MATN[S.keymap],m0=O[0].mat||'',mixed=O.some(o=>(o.mat||'')!==m0),tm=O[0].tmap||{},sc=String(tm.sc||1),T=TXD[m0];
+  const ff=O.length===1&&O[0].fm&&O[0].fm.name?`From the file: ${O[0].fm.name}`:N.none;
+  const opts=(mixed?`<option value="" selected disabled>Mixed</option>`:'')+`<option value=""${!mixed&&!m0?' selected':''}>${hx(ff)}</option>`+Object.entries(MATS).filter(([k,v])=>!v.vent).map(([k,v])=>`<option value="${k}"${!mixed&&k===m0?' selected':''}>${hx(v.name)}</option>`).join('');
+  const so=[['0.5','50%'],['0.75','75%'],['1','Real size'],['1.5','150%'],['2','200%']].map(([v,t])=>`<option value="${v}"${v===sc?' selected':''}>${t}</option>`).join('');
+  return`<div class="pmat"><div class="pmh">${hx(N.l)}</div><label><span>Material</span><select data-mt="m">${opts}</select></label>`+
+    `<label><span>Texture size</span><select data-mt="sc"${T&&!mixed?'':' disabled'}>${so}</select></label>`+
+    `<label><span>Direction</span><select data-mt="rot"${T&&!mixed?'':' disabled'}><option value="0"${tm.rot?'':' selected'}>As built</option><option value="1"${tm.rot?' selected':''}>Turned 90°</option></select></label>`+
+    (T&&!mixed?`<small>${hx(T.d)}, at real size on every face.</small>`:'')+`</div>`;}
+{const _ps=pSelHTML;pSelHTML=function(){const h=_ps.apply(this,arguments),o=selSolid();if(o&&o.mem)return h;return h+pMatHTML();};}
+$('#pSel').addEventListener('change',e=>{const t=e.target,k=t.dataset&&t.dataset.mt;if(!k)return;const O=pMatObjs();if(!O.length)return;snap();
+  for(const o of O){if(k==='m'){if(t.value)o.mat=t.value;else{delete o.mat;delete o.tmap;}}
+    else{const tm={sc:(o.tmap&&o.tmap.sc)||1,rot:(o.tmap&&o.tmap.rot)||0};if(k==='sc')tm.sc=+t.value||1;else tm.rot=t.value==='1'?1:0;if(tm.sc!==1||tm.rot)o.tmap=tm;else delete o.tmap;}}
+  refresh();pCtx();const N=MATN[S.keymap];msg(k==='m'?(t.value?`${N.cmd}: ${MATS[t.value].name} on ${plural(O.length,'object')}.`:`${N.cmd}: ${plural(O.length,'object')} back to ${N.none}.`):`Texture ${k==='sc'?'size':'direction'} changed on ${plural(O.length,'object')}.`);});
 </script>
 
 </html>
