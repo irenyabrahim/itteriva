@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Itteriva</title><!-- v105c textures, firm tester step 1 -->
+<title>Itteriva</title><!-- v105c textures, firm tester step 2 -->
 <link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="icon" href="icon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="icon-180.png"><meta name="theme-color" content="#202326">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&family=Architects+Daughter&display=swap">
@@ -13883,6 +13883,95 @@ document.head.insertAdjacentHTML('beforeend',`<style>.wlcdrop{display:flex;gap:1
 .lpans p{margin:3px 0}.lpa1{margin:6px 0}.lpans kbd,.lpmiss kbd{font:10.5px var(--f-mono,monospace);border:1px solid var(--line);border-radius:4px;padding:0 4px}
 .lpsrc{color:var(--muted);font-size:11px}
 </style>`);
+
+
+/* ---------- Firm tester fixes, step 2 (2026-10-24): walls and floors drawn the way each program draws them ----------
+   Ireny: we shouldn't rely on modeling in one program and assigning walls in another. Revit WA draws walls point by point (Pick Lines stays as WP),
+   Rhino vaWall, AutoCAD WALLADD and SketchUp Wall do the same; Floor (SB, vaSlab, SLABADD, Floor) sketches a boundary. Selected lines still convert. */
+{const W=TOOLS.find(t=>t.id==='wallcrv'),B=TOOLS.find(t=>t.id==='build');
+  Object.assign(W,{label:'Wall',key:{rhino:'vaWall',revit:'WA',sketchup:'Wall',autocad:'WALLADD'},
+    alias:{rhino:['vawall','wall','walls','wallfromcurve','wallsfromcurves'],revit:['wa','wall','wp','picklines','wallpicklines','wallfromlines'],sketchup:['wall','walls','makewall','wallfromedges'],autocad:['walladd','wall','converttowalls','wallconvert','aecwallconvert']},
+    like:{rhino:'VisualARQ vaWall: click points, or select curves first',revit:'Wall (WA): click points; Pick Lines (WP) turns selected lines into walls',sketchup:'no wall tool in SketchUp; here Wall draws walls the way Line draws edges',autocad:'WALLADD (AutoCAD Architecture); CONVERTTOWALLS turns lines into walls'}});
+  B.key.revit='MB';B.alias.revit=['mb','makebuilding','wallbyface','floorbyface'];B.like.revit='Wall by Face, Floor by Face and Room in one step, from a mass';
+  const F={id:'floor',label:'Floor',icon:'<path d="M3 15l9-5 9 5-9 5z"/><path d="M3 15v2l9 5 9-5v-2"/>',
+    key:{rhino:'vaSlab',revit:'SB',sketchup:'Floor',autocad:'SLABADD'},
+    alias:{rhino:['vaslab','slab','floor'],revit:['sb','floor','floorarchitectural'],sketchup:['floor','slab'],autocad:['slabadd','slab','floor']},
+    like:{rhino:'VisualARQ vaSlab: click the boundary',revit:'Floor (SB): sketch the boundary, then Finish',sketchup:'no floor tool in SketchUp; here Floor draws the outline the way Line does',autocad:'SLABADD (AutoCAD Architecture)'}};
+  if(!TOOLS.some(t=>t.id==='floor'))TOOLS.splice(TOOLS.indexOf(W)+1,0,F);
+  const g=GGRP.find(x=>x[0]==='Building');if(g&&!g[1].includes('floor'))g[1].push('floor');}
+Object.assign(SNOTE,{build:{revit:'MB is Itteriva\'s own command: it turns a selected outline or mass into walls, floor and roof at once. To draw walls the Revit way, type WA.'},
+  wallcrv:{revit:'Wall (WA): pick a type in the options, then click the start and end of each wall. Walls keep chaining until you press Esc. Pick Lines (WP) turns selected lines into walls.',
+    rhino:'vaWall comes from VisualARQ, a Rhino plug-in: click points to draw walls, or select curves first to turn them into walls.',
+    sketchup:'SketchUp has no wall tool. Here, Wall draws walls the way Line (L) draws edges; press Esc to stop.',
+    autocad:'WALLADD comes from AutoCAD Architecture: click the start and end of each wall; Enter ends the chain. CONVERTTOWALLS turns selected lines into walls.'},
+  floor:{revit:'Floor (SB): click the corners of the boundary, then click the first one (or press Enter) to finish.',rhino:'vaSlab comes from VisualARQ: click the boundary corners; Enter closes it.',
+    sketchup:'SketchUp has no floor tool. Here, Floor draws a closed outline the way Line (L) does and gives it the floor type.',autocad:'SLABADD comes from AutoCAD Architecture: click the boundary corners; Enter closes it.'}});
+BUILDHINT.revit=' Make building (MB) turns a selected outline into walls. To draw walls the Revit way, type WA; for a floor, SB.';
+{const _ac=asmCmd;asmCmd=function(lk){if(['floor','sb','slab','slabadd','vaslab','floorarchitectural'].includes(lk))return false;return _ac.apply(this,arguments);};}
+
+// drawing an element: the sketch line with a type, height and location line; walls chain until Esc
+let DEL=null;D.elW=D.elW||{p:Math.max(0,S.preset|0),h:0,j:'c'};D.elF=D.elF||{p:Math.max(0,S.fpreset|0)};
+const ELN={wall:{rhino:'vaWall',revit:'Wall',sketchup:'Wall',autocad:'WALLADD'},floor:{rhino:'vaSlab',revit:'Floor',sketchup:'Floor',autocad:'SLABADD'}};
+const wallH=()=>D.elW.h||S.height||3,floorT=()=>FPRESETS[D.elF.p]?FPRESETS[D.elF.p].layers.reduce((a,l)=>a+l[1],0)/1000:0.3;
+function elStart(kind){if(sk){sk=null;drawSketch();}if(D.mode==='arc')D.mode='line';setTool('sketch');DEL=kind;setSelIds([]);renderOpts();updateHint();
+  const k=S.keymap,N=ELN[kind][k];msg(kind==='wall'?`${N}: click the start of the wall, then each corner. ${k==='revit'?'Walls keep chaining; Esc stops.':k==='autocad'?'Enter ends the chain.':'Enter or Esc ends it.'} Type ${(PRESETS[D.elW.p]||{}).name||'wall'}, ${fmtL(wallH())} high; change them in the options.`
+    :`${N}: click the corners of the floor boundary; the first corner or Enter closes it. Type ${(FPRESETS[D.elF.p]||{}).name||'floor'}.`);}
+{const _st=setTool;setTool=function(t){if(t!=='sketch')DEL=null;return _st.apply(this,arguments);};}
+{const _go=getOpts;getOpts=function(){const g=_go.apply(this,arguments);if(!DEL||tool!=='sketch'||!sk||!g||pending||pp)return g;const k=S.keymap,n=sk.pts.length;
+  const keep=g.opts.filter(o=>['Close','Undo','Length','Ortho','Grid'].includes(o.label)&&!(DEL==='wall'&&o.label==='Close'&&n<3));let o=[];
+  if(DEL==='wall'){const P=PRESETS[D.elW.p]||PRESETS[0],J=WJ[k]||WJ.revit;
+    o=[{label:'Type',key:'T',val:P.name.replace(/^Interior: /,'Int. '),act:()=>{D.elW.p=(D.elW.p+1)%PRESETS.length;msg(`Wall type: ${PRESETS[D.elW.p].name}.`);}},
+      {label:'Height',key:'H',val:fmtN(wallH(),'input'),act:()=>ask('Wall height',wallH().toFixed(2),v=>{if(v<0.1||v>100)return'Height must be between 0.1 and 100 m.';D.elW.h=v;})},
+      {label:k==='revit'?'Location':'Justify',key:'J',val:(J[D.elW.j]||D.elW.j).replace(/^Finish Face: /,''),act:()=>{D.elW.j=cycle(['c','e','i'],D.elW.j);msg(`${k==='revit'?'Location Line':'Justify'}: ${J[D.elW.j]}.`);}}];}
+  else{const P=FPRESETS[D.elF.p]||FPRESETS[0];o=[{label:'Type',key:'T',val:P.name,act:()=>{D.elF.p=(D.elF.p+1)%FPRESETS.length;msg(`Floor type: ${FPRESETS[D.elF.p].name}, ${Math.round(floorT()*1000)} mm.`);}}];}
+  const N=ELN[DEL][k];return{prompt:DEL==='wall'?(n?`${N}: next point. ${k==='revit'?'Esc':'Enter'} ends the chain`:`${N}: start point`):(n<3?`${N}: corner of the boundary`:`${N}: next corner. Enter or the first corner closes it`),opts:o.concat(keep)};};}
+function elWall(c){c.name='Wall';c.wall={p:D.elW.p,L:clone(PRESETS[D.elW.p].layers),h:rnd4(wallH()),j:D.elW.j,f:false};}
+{const _fo=finishOpen;finishOpen=function(){const el=DEL;if(el==='floor'){DEL=null;}const r=_fo.apply(this,arguments);
+  if(el==='wall'){const c=selObjs()[0];if(c&&c.kind==='curve'&&!c.wall){elWall(c);refresh();const len=curveLen(c);elStart('wall');setSelIds([c.id]);
+    msg(`Wall drawn, ${fmtL(len)} long, ${PRESETS[D.elW.p].name.replace(/^Interior: /,'interior ')}. Click to start the next wall, or ${S.keymap==='revit'?'Esc':'Enter or Esc'} to stop.`);}}
+  return r;};}
+{const _es=endSketch;endSketch=function(){if(DEL==='floor'&&sk&&sk.pts.length>=3){closeSketch();return;}if(DEL==='floor'&&sk&&sk.pts.length){msg('A floor needs at least three corners.');return;}return _es.apply(this,arguments);};}
+{const _fs=finishShape;finishShape=function(raw){const el=DEL;const r=_fs.apply(this,arguments);const c=selObjs()[0];if(!el||!c||c.kind!=='curve'||!c.closed)return r;
+  if(el==='wall'){elWall(c);refresh();elStart('wall');setSelIds([c.id]);msg(`Closed run of walls, ${fmtL(curveLen(c))} long. Click to start another wall, or Esc to stop.`);return r;}
+  const h=floorT(),f={id:'s'+(++solidSeq),name:'Floor',kind:'extrude',pts:c.pts.map(p=>p.slice()),h:rnd4(Math.max(0.05,h)),pos:[c.pos[0],rnd3(c.pos[1]-h),c.pos[2]],rot:c.rot||0,sc:[1,1,1],layer:'floors',floor:{p:D.elF.p}};
+  S.solids=S.solids.filter(o=>o.id!==c.id);S.solids.push(f);setSelIds([f.id]);refresh();
+  msg(`Floor made: ${FPRESETS[D.elF.p].name}, ${Math.round(h*1000)} mm, ${fmtA(Math.abs(area(c.pts)))}, top at ground level. ${S.keymap==='revit'?'Type SB':'Run it again'} for another floor.`);return r;};}
+// Wall with nothing selected draws; with lines selected (or typed as Pick Lines / CONVERTTOWALLS / MakeWall) it converts them, as before
+const WCONV=['wp','picklines','wallpicklines','wallfromlines','converttowalls','wallconvert','aecwallconvert','makewall','wallfromedges','wallfromcurve','wallsfromcurves'];
+{const _ex=exec;exec=function(id){if(id==='floor'){if(typeof learnCard==='function')learnCard(id);ACT='Floor';elStart('floor');return;}
+  if(id==='wallcrv'){const raw=(typeof LRNRAW==='string'?LRNRAW:'').replace(/\s+/g,''),conv=WCONV.includes(raw),cur=selObjs().some(o=>o.kind==='curve'&&!o.txt&&!o.dim);
+    if(!conv&&!cur){if(typeof learnCard==='function')learnCard(id);ACT='Wall';elStart('wall');return;}}
+  return _ex.apply(this,arguments);};}
+// what the selection is: a wall or floor says so, whichever program's controls you use
+{const _ps=pSelHTML;pSelHTML=function(){const o=selSolid();if(o&&selIds().length===1&&!['window','door'].includes(tool)){
+  if(o.wall){const P=PRESETS[o.wall.p];return`<b>Wall</b><span>${esc(P?P.name:'Custom wall')}, ${fmtL(o.wall.h)} high. It stays a wall whichever program's controls you use.</span>`;}
+  if(o.name==='Floor'&&o.kind==='extrude'&&objLayer(o)==='floors'){const P=o.floor&&FPRESETS[o.floor.p];return`<b>Floor</b><span>${P?esc(P.name)+', ':''}${Math.round(o.h*o.sc[1]*1000)} mm slab. It stays a floor whichever program's controls you use.</span>`;}}
+  return _ps.apply(this,arguments);};}
+// toolbar: the Wall button opens a menu of building elements (the way Revit's Architecture tab groups them)
+function railEl(){const b=rail.querySelector('button[data-tool="wallcrv"]');if(!b||b.querySelector('.rdd'))return;
+  const d=document.createElement('span');d.className='rdd';d.title='Building elements: wall, floor, roof, door, window';d.setAttribute('aria-hidden','true');d.textContent='▾';b.appendChild(d);
+  b.addEventListener('contextmenu',e=>{e.preventDefault();d.click();});
+  d.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();let m=$('#rddm');if(m&&!m.hidden){m.hidden=true;return;}if(!m){m=document.createElement('div');m.id='rddm';m.className='rddm';m.setAttribute('role','menu');document.body.appendChild(m);}
+    const k=S.keymap,I=[['wallcrv','Wall',TOOLS.find(t=>t.id==='wallcrv').key[k]],['wp','Wall from selected lines',{rhino:'vaWall',revit:'WP',sketchup:'MakeWall',autocad:'CONVERTTOWALLS'}[k]],['floor','Floor',TOOLS.find(t=>t.id==='floor').key[k]],['roof','Roof',TOOLS.find(t=>t.id==='roof').key[k]],['door','Door',TOOLS.find(t=>t.id==='door').key[k]],['window','Window',TOOLS.find(t=>t.id==='window').key[k]]];
+    m.innerHTML=I.map(([id,n,kk])=>`<button type="button" role="menuitem" data-el="${id}"><span>${n}</span><kbd>${esc(kk||'')}</kbd></button>`).join('');
+    const r=d.getBoundingClientRect();m.style.left=Math.max(8,Math.min(innerWidth-220,r.left-120))+'px';m.style.top=(r.bottom+4)+'px';m.hidden=false;
+    m.onclick=ev=>{const x=ev.target.closest('[data-el]');if(!x)return;m.hidden=true;const id=x.dataset.el;if(id==='wp'){LRNRAW='wp';try{exec('wallcrv');}finally{LRNRAW='';}}else exec(id);if(msgExtra){msg(msgExtra.trim());msgExtra='';}};});}
+document.addEventListener('pointerdown',e=>{const m=$('#rddm');if(m&&!m.hidden&&!e.target.closest('#rddm,.rdd'))m.hidden=true;},true);
+{const _br=buildRail;buildRail=function(){const r=_br.apply(this,arguments);try{railEl();}catch(e){}return r;};}
+document.head.insertAdjacentHTML('beforeend',`<style>.rail .rdd{flex:none;margin-left:2px;padding:0 3px;color:var(--muted);cursor:pointer;font-size:11px;border-radius:3px}.rail .rdd:hover{background:var(--accent-soft)}.rail .rdd:hover{color:var(--accent)}
+.rddm{position:fixed;z-index:60;min-width:210px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 22px rgba(20,30,40,.18);padding:4px}.rddm[hidden]{display:none}
+.rddm button{display:flex;justify-content:space-between;gap:12px;width:100%;border:0;background:transparent;color:inherit;font:inherit;font-size:13px;padding:6px 9px;border-radius:5px;cursor:pointer;text-align:left}
+.rddm button:hover{background:var(--accent-soft)}.rddm kbd{font:11px var(--f-mono,monospace);color:var(--muted)}</style>`);
+try{buildRail();if(typeof gBuild==='function')gBuild();}catch(e){console.error(e);}
+
+// welcome: the layout preview sits level with question 1, so no gap opens before question 2 (Ireny 2026-10-24)
+{const _wd=wlcDrop;wlcDrop=function(){_wd();const box=$('#wlcKnow'),h=$('#wlcT1');if(!box||!h)return;let w=document.querySelector('#wlcDlg .wq1');
+  if(!w){const p=h.nextElementSibling,mn=$('#wlcMain');w=document.createElement('div');w.className='wq1';const l=document.createElement('div');l.className='wq1l';h.before(w);w.appendChild(l);l.append(h);if(p&&p.tagName==='P')l.append(p);l.append(box);if(mn)l.append(mn);}
+  w.querySelectorAll(':scope>.th').forEach(x=>x.remove());const th=box.querySelector('.th');if(th)w.appendChild(th);};}
+document.head.insertAdjacentHTML('beforeend',`<style>#wlcDlg .wq1{display:flex;gap:24px;align-items:flex-start;margin-bottom:16px}#wlcDlg .wq1l{flex:1;min-width:0}#wlcDlg .wq1 .wlcdrop{margin-bottom:0}
+#wlcDlg .wq1>.th{position:relative;width:200px;height:110px;flex:none;margin-top:6px;border-radius:8px;background:var(--panel-2);overflow:hidden}
+#wlcDlg .wq1>.th i{position:absolute;border-radius:2px;background:var(--line)}#wlcDlg .wq1>.th i.a{background:var(--accent)}#wlcDlg .wq1>.th i.v{background:var(--panel)}
+@media (max-width:600px){#wlcDlg .wq1>.th{display:none}}</style>`);
 
 </script>
 
