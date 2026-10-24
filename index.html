@@ -1,5 +1,5 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Itteriva</title><!-- v105c textures -->
+<title>Itteriva</title><!-- v105c textures, firm tester step 1 -->
 <link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="icon" href="icon-32.png" sizes="32x32" type="image/png"><link rel="apple-touch-icon" href="icon-180.png"><meta name="theme-color" content="#7a4a28">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@400;500;600&family=Cormorant+Garamond:wght@500;600&family=Architects+Daughter&display=swap">
@@ -13751,6 +13751,137 @@ function vrFloat(){if(!VBAR)return;const vp=$('#vp'),vw=VBAR.parentElement;const
   f.style.outline='none';f.style.boxShadow=`inset ${l?l:2}px ${t?t:2}px 0 0 var(--accent), inset -${rr?rr:2}px -${b?b:2}px 0 0 var(--accent)`;f.style.zIndex='1';}}catch(e){}return r;};}
 if($('#vp'))new ResizeObserver(()=>{vrFloat();}).observe($('#vp'));
 vrFloat();try{labelVPs();}catch(e){}
+
+
+/* ---------- Firm tester fixes, step 1 (2026-10-24): one program at a time ----------
+   Maria (professional tester): Learn mode did the work for her (POLYLINE ran with Revit controls), and seeing four programs at once was overwhelming.
+   Ireny's rules: in Just work, each program's commands only run in that program, and typing another program's command says what to type instead;
+   Learn mode is just as strict and teaches with the learning card; the card has a question box with checked answers; the welcome picks the program
+   from one dropdown, with "I know all of them". People new to modeling (None yet) keep commands from every program. */
+function strictOn(){return !PRF.knowNone;}
+// how each program really does a step, where the command name alone would mislead (checked against each program's own tools)
+const SNOTE={
+  sketch:{revit:'Revit has no polyline. Model Line (LI) with Chain ticked in the Options Bar keeps drawing connected lines; press Esc to end the chain.',
+    sketchup:'SketchUp has no polyline. Line (L) keeps drawing connected edges until you press Esc; closing a loop makes a face.',
+    rhino:'Polyline draws one connected curve; press Enter to finish, or type C to close it.',autocad:'PLINE draws one connected polyline; LINE draws separate segments.'},
+  line:{revit:'Model Line (LI); untick Chain in the Options Bar to draw one segment at a time.',sketchup:'Line (L) draws connected edges; press Esc after each one for single segments.',
+    rhino:'Line draws one segment; Polyline draws connected ones.',autocad:'LINE keeps drawing segments, each its own object; press Enter to end it.'},
+  box:{revit:'Revit has no Box command. Make one as an in-place mass: Extrusion from a rectangle.',sketchup:'SketchUp has no Box tool: draw a Rectangle (R), then Push/Pull (P) it up.'},
+  cylinder:{revit:'Revit has no Cylinder command. Make one as an in-place mass: Extrusion from a circle.',sketchup:'SketchUp has no Cylinder tool: draw a Circle (C), then Push/Pull (P) it up.'},
+  sphere:{revit:'Revit has no Sphere command. Make one as an in-place mass: Revolve a half circle.',sketchup:'SketchUp has no Sphere tool: draw two circles at right angles and run Follow Me with one around the other.'},
+  pushpull:{revit:'Revit has no Push/Pull. Walls and floors change height in Properties; masses and in-place forms change by dragging their shape handles.',autocad:'PRESSPULL pulls a closed area or a face of a solid.'},
+  height:{revit:'Revit has no ExtrudeCrv: model an in-place mass Extrusion from a sketch.',sketchup:'SketchUp has no Extrude command: Push/Pull (P) a face.'},
+  trim:{sketchup:'SketchUp has no Trim: erase the extra edge pieces with the Eraser (E).',revit:'Trim/Extend to Corner (TR): click the two parts you want to keep.'},
+  extend:{sketchup:'SketchUp has no Extend: draw a Line (L) from the end to the edge.'},
+  fillet:{revit:'Revit has no Fillet for lines: draw a Fillet Arc from the Draw panel of the line tool.'},
+  array:{sketchup:'SketchUp has no Array command: Move (M) with Ctrl (Option on Mac) to copy, then type 5x for five copies.',revit:'Array (AR): tick Group and Associate to keep the copies linked.'},
+  mirror:{sketchup:'SketchUp has no Mirror command: right-click and use Flip Along, or Scale (S) by -1.',revit:'Mirror - Pick Axis (MM) or Mirror - Draw Axis (DM).'},
+  copy:{revit:'Copy (CO); tick Multiple in the Options Bar for several copies.',sketchup:'SketchUp has no Copy command: Move (M) and tap Ctrl (Option on Mac).'},
+  explode:{revit:'Revit has no Explode for its own elements; imported CAD can be exploded from the Modify tab.'},
+  join:{revit:'Join Geometry (JG) joins walls, floors and masses so they read as one.',sketchup:'Touching edges already connect; right-click > Weld Edges makes them one curve.'},
+  union:{revit:'Revit has no Boolean commands for walls and floors; inside families and in-place masses, Join Geometry merges solids.',sketchup:'Outer Shell is in every version; Union is in Solid Tools (SketchUp Pro).'},
+  difference:{revit:'Revit has no Boolean Difference: inside families and in-place masses, a void form with Cut Geometry does it.',sketchup:'Subtract is in Solid Tools (SketchUp Pro).'},
+  intersection:{revit:'Revit has no Boolean Intersection for model elements.',sketchup:'Intersect is in Solid Tools (SketchUp Pro); Intersect Faces only adds edges.'},
+  loft:{sketchup:'SketchUp has no Loft tool built in; people use the Curviloft extension.',revit:'Select two profiles in a conceptual mass and Create Form to loft them.'},
+  offset:{sketchup:'Offset (F) works on a face or connected edges, not on a single line.'},
+  build:{revit:'Wall (WA) here makes walls from an outline you select; drawing walls point by point is coming next.'}};
+const KSAY=k=>KM[k]||k;
+function strictHow(t,cur){const note=SNOTE[t.id]&&SNOTE[t.id][cur];if(note)return esc(note);
+  const has=((t.alias&&t.alias[cur])||[]).length,nm=(t.like&&t.like[cur])||t.label,key=t.key&&t.key[cur];
+  if(!has)return`${KSAY(cur)} has no ${esc(t.label)} command.`;
+  return`In ${KSAY(cur)}: <em>${esc(nm)}</em>${key&&!nm.toLowerCase().includes(String(key).toLowerCase())?` · type <kbd>${esc(key)}</kbd>`:''}.`;}
+let SMISS=null,LPMISS='';
+{const _lk=lookup;lookup=function(v){const r=_lk(v);if(!r||!r.k||r.k===S.keymap||!strictOn())return r;const w=String(v).toLowerCase().replace(/\s+/g,'');
+  const progs=Object.keys(KM).filter(k=>k!==S.keymap&&TOOLS.some(t=>t.alias&&(t.alias[k]||[]).includes(w)));
+  // a single-line word (L, LINE) is about Line, not Polyline, even where a program's line tool draws connected lines
+  const ln=TOOLS.find(t=>t.id==='line'),t=ln&&Object.keys(KM).some(k=>(ln.alias[k]||[]).includes(w))?ln:r.t;SMISS={v:String(v).trim(),t,progs:progs.length?progs:[r.k]};return null;};}
+function strictTell(m){const cur=S.keymap,P=m.progs.map(KSAY),who=P.length>1?P.slice(0,-1).join(', ')+' and '+P[P.length-1]:P[0];
+  const head=`<b>${esc(m.v.toUpperCase())}</b> is ${/^[AEIOU]/.test(who)?'an':'a'} ${who} command, so it doesn't run with ${KSAY(cur)} controls.`,how=strictHow(m.t,cur);
+  msg(`${head} ${how}`);
+  if(PRF.learn===cur&&typeof lpOn==='function'){LPMISS=`<div class="lpmiss"><b>${esc(m.v.toUpperCase())} is ${who}</b><p>${how}</p></div>`;
+    if(lpOn()){lpEl.dataset.live='1';lpRender();}else{const c=$('#lrnCard');if(c){c.innerHTML=`<b>Learning ${KSAY(cur)}</b><span>${how}</span>`;c.classList.remove('short');c.hidden=false;clearTimeout(lrnT);lrnT=setTimeout(hideLearn,12000);}}}}
+{const _r=run;run=function(raw){SMISS=null;const out=_r.apply(this,arguments);if(SMISS){const m=SMISS;SMISS=null;strictTell(m);}return out;};}
+// suggestions only in the program you're using: no "= POLYLINE in Rhino" rows, and another program's command word isn't swapped for a local one on Enter
+{const _aa=acAll;acAll=function(){const L=_aa.apply(this,arguments);if(strictOn())for(const it of L)if(it.other)it.other=null;return L;};}
+function crossWord(w){if(!w||!strictOn())return false;const cur=S.keymap;if(TOOLS.some(t=>t.alias&&(t.alias[cur]||[]).includes(w)))return false;
+  return Object.keys(KM).some(k=>k!==cur&&TOOLS.some(t=>t.alias&&(t.alias[k]||[]).includes(w)));}
+{const _au=acUpdate;acUpdate=function(){const r=_au.apply(this,arguments);const w=cmdIn.value.trim().toLowerCase().replace(/^[-_']+/,'').replace(/\s+/g,'');if(crossWord(w)&&!getOpts())acHide();return r;};}
+// Make building with nothing to convert: say how this program gets there
+const BUILDHINT={revit:' Wall (WA) here makes walls from an outline: draw it with Model Line (LI), select it, then type WA. Drawing walls point by point, the Revit way, is coming next.',
+  rhino:' MakeBldg needs a closed curve or solid: draw one with Polyline or Box, select it, then MakeBldg. vaWall makes walls along curves.',
+  sketchup:' Draw a closed shape with Line (L) or Rectangle (R), select it, then type MB. MakeWall makes walls along edges.',
+  autocad:' Draw a closed outline with PLINE, select it, then type MB. CONVERTTOWALLS makes walls along lines.'};
+{const _ex=exec;exec=function(id){const r=_ex.apply(this,arguments);if(id==='build'&&/Select a solid first/.test(msgExtra)&&BUILDHINT[S.keymap])msgExtra=BUILDHINT[S.keymap];return r;};}
+
+// Learn mode is strict: choosing a program to learn switches the controls to it; leaving stops learning
+{const _sl=setLearn;setLearn=function(k,quiet){_sl(k,quiet);LPMISS='';
+  if(PRF.learn&&strictOn()&&PRF.learn!==S.keymap&&!lpPracticing()){lpPractice(true);
+    msg(`Learning ${KM[PRF.learn]}: controls, shortcuts and command names are ${KM[PRF.learn]}'s now. Commands from other programs don't run; the learning panel shows the ${KM[PRF.learn]} way instead, and you can ask it questions. Type LEARN OFF to stop.`);}
+  renderLearnSel();};}
+{const _rl=renderLearnSel;renderLearnSel=function(){_rl();const sel=$('#learnSel');if(!sel||!lpPracticing())return;const base=PRF.prac,keep=[...sel.options].filter(o=>o.value==='@panel');
+  sel.innerHTML='<option value="">Nothing</option>'+Object.keys(KM).filter(k=>k!==base).map(k=>`<option value="${k}">${KM[k]}</option>`).join('');keep.forEach(o=>sel.appendChild(o));sel.value=PRF.learn;};}
+$('#lpBack').addEventListener('click',e=>{if(!strictOn())return;e.stopImmediatePropagation();const L=PRF.learn;setLearn('',true);msg(`Stopped learning ${KM[L]||''}. Back to ${KM[S.keymap]} controls.`);},true);
+{const _lr=lpRender;lpRender=function(){_lr.apply(this,arguments);if(!lpEl||lpEl.hidden)return;const L=PRF.learn;
+  if(strictOn()&&lpPracticing()){$('#lpTitle').textContent=`Learning ${KM[L]}`;$('#lpPracT').textContent=`Only ${KM[L]} commands work while you learn.`;$('#lpBack').textContent=`Stop learning`;}
+  if(LPMISS){const b=$('#lpBody');if(b)b.insertAdjacentHTML('afterbegin',LPMISS);}
+  const a=$('#lpAsk');if(a){a.hidden=!PRF.learn;$('#lpAskQ').placeholder=`Ask how to do something in ${KM[L]||'this program'}`;}};}
+{const _lc=learnCard;learnCard=function(id){LPMISS='';return _lc.apply(this,arguments);};}
+
+// question box in the learning panel: answers come only from the app's checked command list, in the program you're learning
+lpEl.querySelector('#lpBody').insertAdjacentHTML('afterend',`<div class="lpask" id="lpAsk" hidden><form id="lpAskF" autocomplete="off"><input id="lpAskQ" type="text" aria-label="Ask a question about the program you're learning"><button type="submit">Ask</button></form><div class="lpans" id="lpAskA" hidden></div></div>`);
+function lpAnswer(raw){const L=PRF.learn||S.keymap,q=raw.trim().toLowerCase();if(!q)return'';
+  const words=q.split(/[^a-z0-9/]+/).filter(Boolean),out=[];
+  // a command named in the question, from any program: answer with how the program you're learning does it
+  const named=[];for(const w of words){if(w.length<2||HOWSTOP.has(w))continue;for(const t of TOOLS){if(!t.alias||named.includes(t))continue;if(Object.keys(KM).some(k=>(t.alias[k]||[]).includes(w)))named.push(t);}}
+  for(const t of named.slice(0,2))out.push(`<div class="lpa1"><b>${esc(t.label)}</b><p>${strictHow(t,L)}</p></div>`);
+  if(!out.length&&typeof howMatch==='function'){const{hit}=howMatch(q);if(hit.length){const T=hit[0],N=id=>{const e=howEntry(id,L);return`<b>${esc(e?e.name:id)}</b>`;};
+    const rows=T.t.map(id=>[id,howEntry(id,L)]).filter(([,e])=>e).slice(0,4);
+    out.push(`<p>${T.n(N)}</p>`+rows.map(([id,e])=>{const t=TOOLS.find(x=>x.id===id);return`<div class="lpa1"><b>${esc(e.name)}</b>${(e.keys||[]).filter(x=>String(x).toLowerCase()!==String(e.name).toLowerCase()).map(x=>` <kbd>${esc(x)}</kbd>`).join('')}${t&&SNOTE[id]&&SNOTE[id][L]?`<p>${esc(SNOTE[id][L])}</p>`:''}</div>`;}).join(''));}}
+  if(!out.length){const sig=words.filter(w=>w.length>=3&&!HOWSTOP.has(w));const sc=[];
+    for(const t of TOOLS){if(!t.alias||!t.like)continue;const hay=[t.label,...Object.values(t.like)].join(' ').toLowerCase();if(sig.some(w=>hay.split(/[^a-z0-9]+/).some(x=>x.startsWith(w))))sc.push(t);}
+    for(const t of sc.slice(0,3))out.push(`<div class="lpa1"><b>${esc(t.label)}</b><p>${strictHow(t,L)}</p></div>`);}
+  return out.length?out.join('')+`<p class="lpsrc">From Itteriva's checked command list for ${KM[L]}.</p>`
+    :`<p>No checked answer for “${esc(raw.trim())}” yet. Try naming the command you'd use in a program you know, like “polyline” or “push pull”, or press <b>?</b> at the top of the view for tutorials.</p>`;}
+$('#lpAskF').addEventListener('submit',e=>{e.preventDefault();const a=$('#lpAskA');a.innerHTML=lpAnswer($('#lpAskQ').value);a.hidden=!a.innerHTML;lpEl.dataset.live='1';});
+$('#lpAskQ').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){$('#lpAskQ').value='';$('#lpAskA').hidden=true;}});
+
+// welcome: one dropdown for the program you know, including "I know all of them"
+{const k1=$('#wlcT1');if(k1)k1.lastChild.textContent='Which program do you know best?';const p1=k1&&k1.nextElementSibling;
+  if(p1&&p1.tagName==='P')p1.textContent='We open with its layout, shortcuts, mouse and command names. Commands work the way it spells them; type another program\'s command and we tell you what it is called here.';
+  const p2=$('#wlcT2')&&$('#wlcT2').nextElementSibling;if(p2&&p2.tagName==='P')p2.textContent='Learn mode switches the controls to the program you\'re learning. Only its commands work; type one from another program and the learning card shows the right one instead.';}
+{const _ow=openWelcome;openWelcome=function(){WLC.all=!!PRF.knowAll&&!PRF.knowNone;return _ow.apply(this,arguments);};}
+function wlcDrop(){const box=$('#wlcKnow');if(!box)return;const none=WLC.know==='none';if(none)WLC.all=false;
+  if(WLC.all){WLC.also=Object.keys(KM).filter(k=>k!==WLC.know);if(WLC.learn){WLC.learn='';}$('#wlcLearn').querySelectorAll('button[data-l]').forEach(b=>{if(b.dataset.l)b.remove();});}
+  else if(!none)WLC.also=[];
+  const val=none?'none':WLC.all?'all':WLC.know,L=WLC_LAY[none?'none':WLC.know];
+  box.className='wlcdrop';box.innerHTML=`<div class="wdsel"><select id="wlcKnowSel" aria-labelledby="wlcT1">${[...Object.keys(KM).map(k=>[k,KM[k]]),['all','I know all of them'],['none','None yet, I\'m new to modeling']].map(([k,n])=>`<option value="${k}" ${k===val?'selected':''}>${n}</option>`).join('')}</select>
+    ${WLC.all?`<label class="wdstart">Start in <select id="wlcStartSel">${Object.keys(KM).map(k=>`<option value="${k}" ${k===WLC.know?'selected':''}>${KM[k]}</option>`).join('')}</select></label><small>You work in one program at a time. Switch any time under Controls in the top bar.</small>`:`<small>${WLC_TXT[none?'none':WLC.know]}</small>`}</div>
+    <span class="th" aria-hidden="true">${L.map(r=>`<i class="${r[4]||''}" style="left:${r[0]}%;top:${r[1]}%;width:${r[2]}%;height:${r[3]}%"></i>`).join('')}</span>`;
+  const mn=$('#wlcMain');if(mn){mn.hidden=true;mn.innerHTML='';}
+  $('#wlcKnowSel').onchange=e=>{const v=e.target.value;WLC.fresh=false;if(v==='all'){WLC.all=true;if(WLC.know==='none')WLC.know=S.keymap||'rhino';}else{WLC.all=false;WLC.know=v;}renderWelcome();};
+  const ss=$('#wlcStartSel');if(ss)ss.onchange=e=>{WLC.know=e.target.value;renderWelcome();};
+  const sm=$('#wlcSum');if(sm&&WLC.all)sm.textContent=sm.textContent.replace(/ ?You also know [^.]*\./,'')+` You know all four; you start in ${KM[WLC.know]}.`;}
+{const _rw=renderWelcome;renderWelcome=function(){const r=_rw.apply(this,arguments);try{wlcDrop();}catch(e){console.error(e);}return r;};}
+$('#wlcGo').addEventListener('click',()=>{PRF.knowAll=!!WLC.all&&WLC.know!=='none';if(PRF.knowAll)WLC.also=Object.keys(KM).filter(k=>k!==WLC.know);},true);
+document.head.insertAdjacentHTML('beforeend',`<style>.wlcdrop{display:flex;gap:16px;align-items:stretch;margin-bottom:18px}
+.wlcdrop .wdsel{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}
+.wlcdrop select{font:inherit;font-size:15px;padding:9px 10px;border:1px solid var(--accent);border-radius:9px;max-width:360px}
+.wlcdrop small{color:var(--muted);font-size:12.5px;max-width:440px}
+.wlcdrop .wdstart{display:flex;align-items:center;gap:8px;font-size:13px}
+.wlcdrop .wdstart select{font-size:13px;padding:5px 8px;border-color:var(--line)}
+.wlcdrop .th{position:relative;width:200px;height:110px;flex:none;border-radius:8px;background:var(--panel-2);overflow:hidden}
+.wlcdrop .th i{position:absolute;border-radius:2px;background:var(--line)}.wlcdrop .th i.a{background:var(--accent)}.wlcdrop .th i.v{background:var(--panel)}
+@media (max-width:600px){.wlcdrop .th{display:none}}
+.lpmiss{margin-bottom:10px;padding:8px 10px;border-radius:7px;border-left:3px solid #c97a1a;background:color-mix(in srgb,#e8a33d 14%,var(--panel))}
+.lpmiss p{margin:3px 0 0}
+.lpask{border-top:1px solid var(--line);padding:8px 10px}.lpask[hidden]{display:none}.lpan.col .lpask{display:none}
+.lpask form{display:flex;gap:6px}
+.lpask input{flex:1;min-width:0;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+.lpask button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit}
+.lpans{margin-top:8px;max-height:200px;overflow:auto;font-size:12px}.lpans[hidden]{display:none}
+.lpans p{margin:3px 0}.lpa1{margin:6px 0}.lpans kbd,.lpmiss kbd{font:10.5px var(--f-mono,monospace);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+.lpsrc{color:var(--muted);font-size:11px}
+</style>`);
 
 </script>
 
